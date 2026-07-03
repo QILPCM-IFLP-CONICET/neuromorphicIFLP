@@ -12,6 +12,13 @@ TIME_STEP_DT = 1e-3
 V_INPUT = 3.6
 V_GROUND = 0.0
 
+
+
+AREA = 1000.0  #  define un substrato de Area*Area en micras^2 (ya se, mal elegido el nombre)
+LENGTH = 70.0  # longitud de los nanohilos en micras, por ahora son todos iguales
+
+PROXIMITY_THRESHOLD = 0.05*AREA
+
 def run_simulation_dynamic2(num_wires_to_simulate):
     print("--- Simulación de Red de Nanohilos (Conductancia Dinámica) ---")
     # CORREGIDO: Ahora llamamos usando el alias 'geo'
@@ -19,7 +26,7 @@ def run_simulation_dynamic2(num_wires_to_simulate):
     
     # CORREGIDO: Ahora llamamos usando el alias 'grf'
     G = grf.build_graph2(wires, junctions, wire_map)
-    input_nodes, output_nodes = grf.find_electrode_nodes2(G)
+    input_nodes, output_nodes = grf.find_electrode_nodes2(G, AREA, PROXIMITY_THRESHOLD)
 
     if not grf.check_percolation(G, input_nodes, output_nodes):
         print("Error: La red generada no percoló numéricamente. Incrementá hilos.")
