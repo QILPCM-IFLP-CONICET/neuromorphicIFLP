@@ -6,6 +6,7 @@ import geometria
 import grafo
 import fisica
 
+
 TOTAL_TIME = 0.5
 TIME_STEP_DT = 1e-3
 V_INPUT = 3.6
