@@ -1,87 +1,56 @@
 import numpy as np
-from scipy.sparse.linalg import spsolve
-import matplotlib.pyplot as plt
 
-# Importamos nuestros módulos hermanos
-import geometria as geo
-import grafo as grf
-import fisica as fis
+# ==============================================================================
+# CONSTANTES DE GEOMETRÍA Y RED
+# ==============================================================================
+NUM_WIRES = 2000
+AREA = 1000.0       # Substrato de Area * Area en micras^2
+LENGTH = 70.0       # Longitud de los nanohilos en micras
 
-TOTAL_TIME = 0.5
-TIME_STEP_DT = 1e-3
-V_INPUT = 3.6
-V_GROUND = 0.0
+def generate_and_find_junctions(num_wires=NUM_WIRES, wire_length=LENGTH, area_size=AREA):
+    '''
+    Simula la disposición de nanohilos en un área cuadrada y encuentra todos
+    los puntos donde estos se cruzan.
 
-def run_simulation_dynamic2(num_wires_to_simulate):
-    print("--- Simulación de Red de Nanohilos (Conductancia Dinámica) ---")
-    # CORREGIDO: Ahora llamamos usando el alias 'geo'
-    wires, junctions, wire_map = geo.generate_and_find_junctions(num_wires_to_simulate)
-    
-    # CORREGIDO: Ahora llamamos usando el alias 'grf'
-    G = grf.build_graph2(wires, junctions, wire_map)
-    input_nodes, output_nodes = grf.find_electrode_nodes2(G)
+    Devuelve:
+        wires (list): Lista de diccionarios con ID y extremos de cada nanohilo.
+        junctions (list): Lista de diccionarios con ID, posición e IDs de cables cruzados.
+        wire_to_junctions (dict): Mapeo de ID de cable a sus uniones asociadas.
+    '''
+    xc = np.random.uniform(0, area_size, num_wires)
+    yc = np.random.uniform(0, area_size, num_wires)
+    theta = np.random.uniform(0, np.pi, num_wires)
 
-    if not grf.check_percolation(G, input_nodes, output_nodes):
-        print("Error: La red generada no percoló numéricamente. Incrementá hilos.")
-        return None
+    x_off = (wire_length / 2) * np.cos(theta)
+    y_off = (wire_length / 2) * np.sin(theta)
 
-    history_time, history_G_total, history_active = [], [], []
-    current_time = 0.0
-    steps = int(TOTAL_TIME / TIME_STEP_DT)
+    wires = []
+    for i in range(num_wires):
+        wires.append({
+            'id': i,
+            'p1': np.array((xc[i] - x_off[i], yc[i] - y_off[i])),
+            'p2': np.array((xc[i] + x_off[i], yc[i] + y_off[i]))
+        })
 
-    for step in range(steps):
-        # CORREGIDO: Ahora llamamos usando el alias 'fis'
-        Y, I_vec, n2i = fis.build_admittance_matrix2(G, V_INPUT, V_GROUND, input_nodes, output_nodes)
-        try:
-            V_vec = spsolve(Y, I_vec)
-        except Exception as e:
-            print(f"Error numérico en paso {step}: {e}"); break
+    junctions, wire_to_junctions = [], {i: [] for i in range(num_wires)}
+    junction_id_counter = 0
 
-        I_in = fis.calculate_input_current(G, V_vec, n2i, input_nodes)
-        G_total = 1000 * (I_in / V_INPUT) 
-        count_ON = sum(1 for u, v, d in G.edges(data=True) if d.get('is_memristor', False) and d.get('conductance') == fis.G_ON)
+    # Detección de intersecciones por fuerza bruta
+    for i in range(num_wires):
+        for j in range(i + 1, num_wires):
+            w1, w2 = wires[i], wires[j]
+            d1 = w1['p2'] - w1['p1']
+            d2 = w2['p2'] - w2['p1']
+            denom = d1[0]*d2[1] - d1[1]*d2[0]
+            if denom != 0:
+                t = ((w2['p1'][0] - w1['p1'][0])*d2[1] - (w2['p1'][1] - w1['p1'][1])*d2[0]) / denom
+                u = ((w2['p1'][0] - w1['p1'][0])*d1[1] - (w2['p1'][1] - w1['p1'][1])*d1[0]) / denom
+                if 0 <= t <= 1 and 0 <= u <= 1:
+                    ix, iy = w1['p1'] + t * d1
+                    j_data = {'id': junction_id_counter, 'pos': np.array([ix, iy]), 'wires': (i, j)}
+                    junctions.append(j_data)
+                    wire_to_junctions[i].append(j_data)
+                    wire_to_junctions[j].append(j_data)
+                    junction_id_counter += 1
 
-        history_time.append(current_time)
-        history_G_total.append(G_total)
-        history_active.append(count_ON)
-
-        pcero = 0.4 * TIME_STEP_DT
-        pdecay = 0.8 * TIME_STEP_DT
-        # CORREGIDO: Ahora llamamos usando el alias 'fis'
-        G = fis.update_stochastic_conductance2(G, V_vec, n2i, fis.G_ON, fis.G_OFF, fis.V_THRESHOLD, pcero, 1.0, pdecay)
-        current_time += TIME_STEP_DT
-
-    return history_time, history_G_total, history_active
-
-def run_simulation_dynamic_histeresis(num_wires_to_simulate, cantidad_ciclos=3):
-    print("--- Simulación de Red de Nanohilos (Ciclo de Histéresis) ---")
-    # CORREGIDO: Uso de alias correspondientes
-    wires, junctions, wire_map = geo.generate_and_find_junctions(num_wires_to_simulate)
-    G = grf.build_graph2(wires, junctions, wire_map)
-    input_nodes, output_nodes = grf.find_electrode_nodes2(G)
-
-    history_time, history_v_in, history_i_in, history_active = [], [], [], []
-    steps = int(TOTAL_TIME / TIME_STEP_DT)
-
-    for step in range(steps):
-        current_time = step * TIME_STEP_DT
-        v_now = V_INPUT * np.sin(2 * np.pi * cantidad_ciclos * current_time / TOTAL_TIME)
-
-        Y, I_vec, n2i = fis.build_admittance_matrix2(G, v_now, V_GROUND, input_nodes, output_nodes)
-        try:
-            V_vec = spsolve(Y, I_vec)
-        except: break
-
-        I_in = fis.calculate_input_current(G, V_vec, n2i, input_nodes)
-        count_ON = sum(1 for u, v, d in G.edges(data=True) if d.get('is_memristor', False) and d.get('conductance') == fis.G_ON)
-
-        history_time.append(current_time)
-        history_v_in.append(v_now)
-        history_i_in.append(I_in)
-        history_active.append(count_ON)
-
-        pcero = 0.4 * TIME_STEP_DT
-        pdecay = 0.8 * TIME_STEP_DT
-        G = fis.update_stochastic_conductance2(G, V_vec, n2i, fis.G_ON, fis.G_OFF, fis.V_THRESHOLD, pcero, 1.0, pdecay)
-
-    return history_time, history_v_in, history_i_in, history_active
+    return wires, junctions, wire_to_junctions
