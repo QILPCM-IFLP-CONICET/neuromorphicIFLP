@@ -18,77 +18,86 @@ AREA = 1000.0  #  define un substrato de Area*Area en micras^2 (ya se, mal elegi
 LENGTH = 70.0  # longitud de los nanohilos en micras, por ahora son todos iguales
 
 PROXIMITY_THRESHOLD = 0.05*AREA
+#==============================================================================
+#
+#  Simulación de pulsos
+#
+#=============================================================================
 
-def run_simulation_dynamic2(num_wires_to_simulate):
-    print("--- Simulación de Red de Nanohilos (Conductancia Dinámica) ---")
-    # CORREGIDO: Ahora llamamos usando el alias 'geo'
-    wires, junctions, wire_map = geo.generate_and_find_junctions(num_wires_to_simulate)
-    
-    # CORREGIDO: Ahora llamamos usando el alias 'grf'
+def run_simulation_dynamic_pulse(num_wires_to_simulate):
+    print(f"--- Simulación de Red de Nanohilos N = {num_wires_to_simulate} (Pulso y Relajación - Fig 2b) ---")
+    wires, junctions, wire_map = geo.generate_and_find_junctions(num_wires_to_simulate, LENGTH, AREA)
+
     G = grf.build_graph2(wires, junctions, wire_map)
     input_nodes, output_nodes = grf.find_electrode_nodes2(G, AREA, PROXIMITY_THRESHOLD)
 
-    if not grf.check_percolation(G, input_nodes, output_nodes):
-        print("Error: La red generada no percoló numéricamente. Incrementá hilos.")
-        return None
+    if len(input_nodes) == 0 or len(output_nodes) == 0:
+        print("Error: Red no conectada a electrodos."); return
 
-    history_time, history_G_total, history_active = [], [], []
+    N_orig_junctions = len(junctions)
+
+    print(f"Número de memristores: {N_orig_junctions} -> Nodos de Grafo: {G.number_of_nodes()} | Inputs: {len(input_nodes)} | Outputs: {len(output_nodes)}")
+    #print(f"Areal density: {num_wires_to_simulate/(AREA*AREA)} ")
+
+
+    # Estado inicial: Todos los memristores en G_OFF
+    for u, v, data in G.edges(data=True):
+        if data.get('is_memristor', False):
+            G.edges[u,v]['conductance'] = G_OFF
+
+    history_time = []
+    history_G_total = []
+    history_active = []
     current_time = 0.0
-    steps = int(TOTAL_TIME / TIME_STEP_DT)
 
-    for step in range(steps):
-        # CORREGIDO: Ahora llamamos usando el alias 'fis'
-        Y, I_vec, n2i = fis.build_admittance_matrix2(G, V_INPUT, V_GROUND, input_nodes, output_nodes)
+    # Configuración del experimento (basado en Fig 2b)
+    T_PULSE = 10.0        # 10 segundos de pulso alto [cite: 678]
+    T_RELAX = 40.0       # Tiempo de relajación
+    V_PULSE = 4.0         # Voltaje de facilitación (ejemplo de la Fig 2b)
+    V_READ = 0.05         # 50 mV para lectura
+
+    total_steps = int((T_PULSE + T_RELAX) / TIME_STEP_DT)
+
+    print(f"Iniciando: {T_PULSE}s pulso ({V_PULSE}V) + {T_RELAX}s relajación ({V_READ}V)")
+
+    for step in range(total_steps):
+        # Determinamos el voltaje según el tiempo actual
+        if current_time <= T_PULSE:
+            v_now = V_PULSE
+        else:
+            v_now = V_READ
+
+        # 1. Resolver Circuito con el voltaje dinámico v_now
+        Y, I_vec, n2i = fis.build_admittance_matrix2(G, v_now, V_GROUND, input_nodes, output_nodes, R_WIRE_PER_LENGTH, G_OFF)
         try:
             V_vec = spsolve(Y, I_vec)
-        except Exception as e:
-            print(f"Error numérico en paso {step}: {e}"); break
+        except:
+            print("Error en matriz de admitancia."); break
 
-        I_in = fis.calculate_input_current(G, V_vec, n2i, input_nodes)
-        G_total = 1000 * (I_in / V_INPUT) 
-        count_ON = sum(1 for u, v, d in G.edges(data=True) if d.get('is_memristor', False) and d.get('conductance') == fis.G_ON)
+        # 2. Calcular Conductancia Total (G = I_in / V_actual)
+        I_in = fis.calculate_input_current(G, V_vec, n2i, input_nodes, R_WIRE_PER_LENGTH)
+        # Usamos v_now para la conductancia
+        G_total = 1000 * (I_in / v_now) if v_now != 0 else 0
+
+        count_ON = sum(1 for u, v, data in G.edges(data=True)
+                      if data.get('is_memristor', False) and data.get('conductance') == G_ON)
 
         history_time.append(current_time)
         history_G_total.append(G_total)
         history_active.append(count_ON)
 
-        pcero = 0.4 * TIME_STEP_DT
-        pdecay = 0.8 * TIME_STEP_DT
-        # CORREGIDO: Ahora llamamos usando el alias 'fis'
-        G = fis.update_stochastic_conductance2(G, V_vec, n2i, fis.G_ON, fis.G_OFF, fis.V_THRESHOLD, pcero, 1.0, pdecay)
+        # 3. Actualización Estocástica (Difusión y Disolución de filamentos)
+        # Durante la relajación (V_READ), dominará el pdecay (volatilidad) [cite: 682]
+        #pcero = P0_SET * TIME_STEP_DT
+        #pdecay = P_DECAY * TIME_STEP_DT
+        pcero = P0_SET
+        pdecay = P_DECAY
+        G = fis.update_stochastic_conductance2(G, V_vec, n2i, G_ON, G_OFF, V_THRESHOLD, pcero, ALPHA_SET, pdecay)
+
         current_time += TIME_STEP_DT
 
+        if step % int(total_steps/10) == 0:
+            mode = "PULSO" if current_time <= T_PULSE else "RELAX"
+            print(f"[{mode}] T={current_time:.1f}s | G={G_total} mS | ON={count_ON}")
+
     return history_time, history_G_total, history_active
-
-def run_simulation_dynamic_histeresis(num_wires_to_simulate, cantidad_ciclos=3):
-    print("--- Simulación de Red de Nanohilos (Ciclo de Histéresis) ---")
-    # CORREGIDO: Uso de alias correspondientes
-    wires, junctions, wire_map = geo.generate_and_find_junctions(num_wires_to_simulate)
-    G = grf.build_graph2(wires, junctions, wire_map)
-    input_nodes, output_nodes = grf.find_electrode_nodes2(G)
-
-    history_time, history_v_in, history_i_in, history_active = [], [], [], []
-    steps = int(TOTAL_TIME / TIME_STEP_DT)
-
-    for step in range(steps):
-        current_time = step * TIME_STEP_DT
-        v_now = V_INPUT * np.sin(2 * np.pi * cantidad_ciclos * current_time / TOTAL_TIME)
-
-        Y, I_vec, n2i = fis.build_admittance_matrix2(G, v_now, V_GROUND, input_nodes, output_nodes)
-        try:
-            V_vec = spsolve(Y, I_vec)
-        except: break
-
-        I_in = fis.calculate_input_current(G, V_vec, n2i, input_nodes)
-        count_ON = sum(1 for u, v, d in G.edges(data=True) if d.get('is_memristor', False) and d.get('conductance') == fis.G_ON)
-
-        history_time.append(current_time)
-        history_v_in.append(v_now)
-        history_i_in.append(I_in)
-        history_active.append(count_ON)
-
-        pcero = 0.4 * TIME_STEP_DT
-        pdecay = 0.8 * TIME_STEP_DT
-        G = fis.update_stochastic_conductance2(G, V_vec, n2i, fis.G_ON, fis.G_OFF, fis.V_THRESHOLD, pcero, 1.0, pdecay)
-
-    return history_time, history_v_in, history_i_in, history_active
