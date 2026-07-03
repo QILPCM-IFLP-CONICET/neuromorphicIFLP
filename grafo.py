@@ -2,10 +2,6 @@ import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
 
-AREA = 1000.0
-PROXIMITY_THRESHOLD = 0.05 * AREA
-G_OFF = 1.0 / 1e9
-
 def build_graph2(wires, junctions, wire_to_junctions):
     ''' Construye un grafo a partir de una lista de nanohilos y un diccionario de uniones,
         duplicando nodos para representar memristores como aristas entre los nodos duplicados.
@@ -88,6 +84,7 @@ def find_electrode_nodes2(G, area_size, threshold):
 
 
 
+##. Las siguientes fundiones no se si sin necesarias
 
 def check_percolation(G, input_nodes, output_nodes):
     """ Verifica si existe al menos un camino que conecte la entrada con la salida """
