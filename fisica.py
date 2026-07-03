@@ -10,6 +10,10 @@ G_OFF = 1.0 / 1e9
 V_THRESHOLD = 0.01
 
 
+#--------------------
+#Nueva forma de armar la matriz con matrices sparse y una fuga de corriente
+#--------------------
+
 def build_admittance_matrix2(G, V_INPUT, V_GROUND, input_nodes, output_nodes, R_WIRE_PER_LENGTH, G_OFF_default):
     N = G.number_of_nodes()
     node_to_index = {node: i for i, node in enumerate(G.nodes)}
