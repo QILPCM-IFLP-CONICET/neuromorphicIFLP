@@ -1,7 +1,18 @@
+# grafo.py
 import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
+from load_config import cargar_parametros
 
+# ==============================================================================
+# CARGA DE PARAMETROS DESDE CONFIG.INI (Enfoque A)
+# ==============================================================================
+p = cargar_parametros()
+
+
+# ==============================================================================
+# CONSTRUCCIÓN DEL GRAFO
+# ==============================================================================
 def build_graph2(wires, junctions, wire_to_junctions):
     ''' Construye un grafo a partir de una lista de nanohilos y un diccionario de uniones,
         duplicando nodos para representar memristores como aristas entre los nodos duplicados.
@@ -37,8 +48,8 @@ def build_graph2(wires, junctions, wire_to_junctions):
         G.add_node(node_for_w2_side, pos=j_data['pos'])
 
         # Añadir la arista del memristor entre estos dos nodos
-        # Inicialmente en estado G_OFF
-        G.add_edge(node_for_w1_side, node_for_w2_side, is_memristor=True, conductance=G_OFF)
+        # Inicialmente en estado G_OFF (Leído desde el diccionario p)
+        G.add_edge(node_for_w1_side, node_for_w2_side, is_memristor=True, conductance=p['G_OFF'])
 
     # Añadir los segmentos de nanohilos (resistencias)
     for wire_id, junctions_list_for_wire in wire_to_junctions.items():
@@ -61,31 +72,37 @@ def build_graph2(wires, junctions, wire_to_junctions):
             u_graph_node = wire_junction_to_graph_node[(u_orig_junction_data['id'], wire_id)]
             v_graph_node = wire_junction_to_graph_node[(v_orig_junction_data['id'], wire_id)]
 
-            #G.add_edge(u_graph_node, v_graph_node, weight=dist_between, is_memristor=False)
             G.add_edge(u_graph_node, v_graph_node, weight=dist_between)
 
     return G
 
 
-def find_electrode_nodes2(G, area_size, threshold):
+# ==============================================================================
+# DETECCIÓN DE ELECTRODOS
+# ==============================================================================
+def find_electrode_nodes2(G):
     ''' Encuentra los nodos conectados a los electrodos.
-        Con la nueva estructura de grafo, todos los nodos que están
-        físicamente cerca de un electrodo son considerados.
+        Extrae el tamaño del sustrato (AREA) y el umbral de borde (PROXIMITY_THRESHOLD)
+        directamente de los parámetros centralizados en config.ini.
     '''
+    area_size = p['AREA']
+    threshold = p['PROXIMITY_THRESHOLD']
+    
     pos = nx.get_node_attributes(G, 'pos')
     input_nodes, output_nodes = [], []
     for node_id, coords in pos.items():
         x = coords[0]
-        if x < threshold: input_nodes.append(node_id)
-        elif x > area_size - threshold: output_nodes.append(node_id)
+        if x < threshold: 
+            input_nodes.append(node_id)
+        elif x > area_size - threshold: 
+            output_nodes.append(node_id)
+            
     return input_nodes, output_nodes
 
 
-
-
-
-##. Las siguientes fundiones no se si sin necesarias
-
+# ==============================================================================
+# FUNCIONES DE PERCOLACIÓN Y CAMINOS
+# ==============================================================================
 def check_percolation(G, input_nodes, output_nodes):
     """ Verifica si existe al menos un camino que conecte la entrada con la salida """
     for in_node in input_nodes:
