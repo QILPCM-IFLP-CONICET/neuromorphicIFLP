@@ -3,7 +3,7 @@ import numpy as np
 from load_config import cargar_parametros
 
 # ==============================================================================
-# CARGA DE PARAMETROS DESDE CONFIG.INI (Enfoque A)
+# CARGA DE PARAMETROS DESDE CONFIG.INI 
 # ==============================================================================
 p = cargar_parametros()
 
