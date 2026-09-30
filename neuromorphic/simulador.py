@@ -4,36 +4,30 @@ from scipy.sparse.linalg import spsolve
 import matplotlib.pyplot as plt
 
 # Importamos nuestros módulos hermanos
-import geometria as geo
-import grafo as grf
-import fisica as fis
-from load_config import cargar_parametros
+import .fisica as fis
 
-# ==============================================================================
-# CARGA DE PARAMETROS DESDE CONFIG.INI (Enfoque A)
-# ==============================================================================
-p = cargar_parametros()
 
 
 # ==============================================================================
 # SIMULACIÓN DE PULSOS DINÁMICOS
 # ==============================================================================
-def run_simulation_dynamic_pulse():
+def run_simulation_dynamic_pulse(simulation:dict):
     '''
     Ejecuta la simulación dinámica de pulso y relajación (Fig 2b del paper).
     Toma las constantes de tamaño de red, tiempos, conductancias y probabilidades
     directamente desde el archivo centralizado config.ini.
     '''
+    p = simulation["parameters"]
     num_wires_to_simulate = p['NUM_WIRES']
     
     print(f"--- Simulación de Red de Nanohilos N = {num_wires_to_simulate} (Pulso y Relajación - Fig 2b) ---")
     
     # 1. Generación de la geometría (Firmas limpias sin parámetros redundantes)
-    wires, junctions, wire_map = geo.generate_and_find_junctions()
-
-    # 2. Construcción del grafo y detección de electrodos
-    G = grf.build_graph2(wires, junctions, wire_map)
-    input_nodes, output_nodes = grf.find_electrode_nodes2(G)
+    wire_junctions = simulation["junctions"]
+    wires, junctions, wire_map = wire_junctions["wires"], wire_junctions["junctions"], wire_junctions["wire_to_jnctions"]
+    G = simulation["graph"]
+    terminals = simulation["terminals"]
+    input_nodes, output_nodes = terminals["input_nodes"], terminals["output_nodes"]
 
     if len(input_nodes) == 0 or len(output_nodes) == 0:
         print("Error: Red no conectada a electrodos.")
@@ -75,7 +69,7 @@ def run_simulation_dynamic_pulse():
         p['V_INPUT'] = v_now
 
         # 3.1. Resolver Circuito con el voltaje dinámico v_now
-        Y, I_vec, n2i = fis.build_admittance_matrix2(G, input_nodes, output_nodes)
+        Y, I_vec, n2i = fis.build_admittance_matrix2(simulation)
         try:
             V_vec = spsolve(Y, I_vec)
         except Exception as e:

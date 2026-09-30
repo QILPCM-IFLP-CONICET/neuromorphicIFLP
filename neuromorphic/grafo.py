@@ -1,19 +1,14 @@
 # grafo.py
+
 import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
-from load_config import cargar_parametros
-
-# ==============================================================================
-# CARGA DE PARAMETROS DESDE CONFIG.INI (Enfoque A)
-# ==============================================================================
-p = cargar_parametros()
 
 
 # ==============================================================================
 # CONSTRUCCIÓN DEL GRAFO
 # ==============================================================================
-def build_graph2(wires, junctions, wire_to_junctions):
+def build_graph2(simulation:dict):
     ''' Construye un grafo a partir de una lista de nanohilos y un diccionario de uniones,
         duplicando nodos para representar memristores como aristas entre los nodos duplicados.
         Cada unión original J se convierte en dos nodos en el grafo (J_node_W1, J_node_W2).
@@ -23,6 +18,12 @@ def build_graph2(wires, junctions, wire_to_junctions):
         Los segmentos de nanohilos (resistencias) conectan nodos que representan
         el mismo nanohilo en uniones adyacentes.
     '''
+    p = simulation["parameters"]
+    junctions = simulation["junctions"]
+    wires = junctions["wires"]
+    junctions=junctions["junctions"]
+    wire_to_junctions = junctions["wire_to_junctions"]
+    
     G = nx.Graph()
 
     # wire_junction_to_graph_node will store: { (orig_junction_id, wire_id): graph_node_id }
@@ -74,17 +75,20 @@ def build_graph2(wires, junctions, wire_to_junctions):
 
             G.add_edge(u_graph_node, v_graph_node, weight=dist_between)
 
-    return G
+    simulation["graph"] = G
+    return
 
 
 # ==============================================================================
 # DETECCIÓN DE ELECTRODOS
 # ==============================================================================
-def find_electrode_nodes2(G):
+def find_electrode_nodes2(simulation:dict):
     ''' Encuentra los nodos conectados a los electrodos.
         Extrae el tamaño del sustrato (AREA) y el umbral de borde (PROXIMITY_THRESHOLD)
         directamente de los parámetros centralizados en config.ini.
     '''
+    G = simulation["graph"]
+    p = simulation["parameters"]
     area_size = p['AREA']
     threshold = p['PROXIMITY_THRESHOLD']
     
@@ -96,23 +100,36 @@ def find_electrode_nodes2(G):
             input_nodes.append(node_id)
         elif x > area_size - threshold: 
             output_nodes.append(node_id)
-            
-    return input_nodes, output_nodes
+
+    simulation["terminals"]={
+        "input_nodes": input_nodes,                
+        "output_nodes": output_nodes
+    }
+    return
 
 
 # ==============================================================================
 # FUNCIONES DE PERCOLACIÓN Y CAMINOS
 # ==============================================================================
-def check_percolation(G, input_nodes, output_nodes):
+def check_percolation(simulation:dict):
     """ Verifica si existe al menos un camino que conecte la entrada con la salida """
+
+    G=simulation["G"]
+    input_nodes = simulation["input_nodes"]
+    output_nodes = simulation["output_nodes"]
+
     for in_node in input_nodes:
         for out_node in output_nodes:
             if nx.has_path(G, in_node, out_node):
                 return True
     return False
 
-def get_shortest_path_length(G, input_nodes, output_nodes):
+def get_shortest_path_length(simulation:dict):
     """ Calcula la longitud topológica del camino más corto que conecta los extremos """
+    G=simulation["G"]
+    input_nodes = simulation["input_nodes"]
+    output_nodes = simulation["output_nodes"]
+    
     best_length = float('inf')
     for in_node in input_nodes:
         for out_node in output_nodes:

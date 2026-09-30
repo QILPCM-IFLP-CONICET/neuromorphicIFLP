@@ -41,8 +41,7 @@ def cargar_parametros(filepath="config.ini"):
     params['ALPHA_SET'] = config.getfloat('Probabilities', 'alpha_set')
     params['P_DECAY'] = config.getfloat('Probabilities', 'p_decay')
     params['BETA_RESET'] = config.getfloat('Probabilities', 'beta_reset')
-    
-    return params
+    return {"parameters":params}
 
 # Bloque de prueba para verificar que lee bien el config.ini
 if __name__ == "__main__":

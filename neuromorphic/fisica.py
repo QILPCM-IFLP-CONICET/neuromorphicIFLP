@@ -1,22 +1,24 @@
 # fisica.py
 import numpy as np
 from scipy.sparse import lil_matrix
-from load_config import cargar_parametros
 
-# ==============================================================================
-# CARGA DE PARAMETROS DESDE CONFIG.INI (Enfoque A)
-# ==============================================================================
-p = cargar_parametros()
 
 
 # ==============================================================================
 # CONSTRUCCIÓN DE LA MATRIZ DE ADMITANCIA (SPARSE)
 # ==============================================================================
-def build_admittance_matrix2(G, input_nodes, output_nodes):
+def build_admittance_matrix2(simulation:dict):
     '''
     Construye la matriz de admitancia del circuito usando representaciones dispersas (CSR).
     Toma los voltajes y constantes directamente desde el archivo de configuración.
     '''
+
+    p = simulation["parameters"]
+    G=simulation["graph"]
+    terminals = simulation["terminals"]
+    terminals["input_nodes"]=input_nodes
+    terminals["output_nodes"]=output_nodes
+    
     N = G.number_of_nodes()
     node_to_index = {node: i for i, node in enumerate(G.nodes)}
 
@@ -56,7 +58,13 @@ def build_admittance_matrix2(G, input_nodes, output_nodes):
         Y[i, i] += G_LEAK
         
     # Convertimos a CSR (Compressed Sparse Row) para que el solver vuele
-    return Y.tocsr(), I_vec, node_to_index
+    circuit_data = {
+        "Y":Y.tocsr(),
+        "I": I_vec,
+        "node_to_index": node_to_index,
+    }
+    simulation["circuit"] = circuit_data
+    return circuit_data["Y"], circuit_data["I"], circuit_data["node_to_index"]
 
 
 # ==============================================================================

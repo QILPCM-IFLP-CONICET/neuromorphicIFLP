@@ -5,15 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-
-# ==============================================================================
-# CARGA DE PARAMETROS DESDE CONFIG.INI (Enfoque A)
-# ==============================================================================
-p = cargar_parametros()
-
-
-
-def plot_simulation_results(history_time, history_G_total):
+def plot_simulation_results(simulation, history_time, history_G_total):
     '''
     Genera la grafica de la evolucion temporal de la conductancia de la red,
     reproduciendo el comportamiento dinamico de facilitacion y relajacion volatil
@@ -42,6 +34,7 @@ def plot_simulation_results(history_time, history_G_total):
 
 
     # Convertir a arrays de numpy para facilitar el manejo
+    p = simulation["parameters"]
     t = np.array(history_time)
     G = np.array(history_G_total)
 

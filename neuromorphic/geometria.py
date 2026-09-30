@@ -1,17 +1,11 @@
 # geometria.py
 import numpy as np
-from load_config import cargar_parametros
-
-# ==============================================================================
-# CARGA DE PARAMETROS DESDE CONFIG.INI 
-# ==============================================================================
-p = cargar_parametros()
 
 
 # ==============================================================================
 # FUNCIONES DE GEOMETRÍA Y RED
 # ==============================================================================
-def generate_and_find_junctions():
+def generate_and_find_junctions(simulation:dict):
     '''
     La función se encarga de simular la disposición de nanohilos en un área cuadrada y encontrar todos los puntos donde estos nanohilos se cruzan.
     Usa los parámetros centralizados en config.ini a través del diccionario 'p'.
@@ -41,6 +35,7 @@ def generate_and_find_junctions():
         Esto es útil para navegar por las uniones a lo largo de un nanohilo específico.
     '''
     # Extraemos las variables del diccionario centralizado
+    p = simulation["parameters"]
     num_wires = p['NUM_WIRES']
     wire_length = p['LENGTH']
     area_size = p['AREA']
@@ -81,5 +76,10 @@ def generate_and_find_junctions():
                     wire_to_junctions[i].append(j_data)
                     wire_to_junctions[j].append(j_data)
                     junction_id_counter += 1
-                    
-    return wires, junctions, wire_to_junctions
+
+    simulation["junctions"] = {
+        "wires": wires,
+        "junctions": junctions,
+        "wire_to_junctions": wire_to_junctions
+    }
+    return
