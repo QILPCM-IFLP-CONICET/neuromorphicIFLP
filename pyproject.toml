@@ -50,7 +50,7 @@ Repository = "https://github.com/QILPCM-IFLP-CONICET/neuromorphicNWLamas"
 where = ["src"]
 
 [tool.setuptools.package-data]
-neuromorphic = ["*.ini"]
+neuromorphic = ["*.ini", "py.typed"]
 
 # ---------------------------------------------------------------------------
 # pytest
