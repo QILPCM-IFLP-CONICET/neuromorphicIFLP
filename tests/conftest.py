@@ -1,6 +1,8 @@
 """Shared pytest fixtures."""
 from __future__ import annotations
 
+import copy
+
 import matplotlib
 
 matplotlib.use("Agg")  # headless backend for CI
@@ -18,7 +20,10 @@ def _seed_numpy():
     yield
 
 
-@pytest.fixture
+# ---------------------------------------------------------------------------
+# Parameter dicts (stateless, safe to share across tests)
+# ---------------------------------------------------------------------------
+@pytest.fixture(scope="session")
 def small_params() -> dict:
     """Fast, non-percolating test network."""
     return {
@@ -29,7 +34,7 @@ def small_params() -> dict:
     }
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def percolating_params() -> dict:
     """Percolating test network, above the percolation threshold."""
     return {
@@ -40,11 +45,27 @@ def percolating_params() -> dict:
     }
 
 
-@pytest.fixture
-def sim_small(small_params):
+# ---------------------------------------------------------------------------
+# Session-scoped expensive setups (built once, treated as read-only)
+# ---------------------------------------------------------------------------
+@pytest.fixture(scope="session")
+def _sim_small_base(small_params):
     return setup_simulation(parms=small_params)
 
 
-@pytest.fixture
-def sim_percolating(percolating_params):
+@pytest.fixture(scope="session")
+def _sim_percolating_base(percolating_params):
     return setup_simulation(parms=percolating_params)
+
+
+# ---------------------------------------------------------------------------
+# Function-scoped copies (so mutating tests don't leak state)
+# ---------------------------------------------------------------------------
+@pytest.fixture
+def sim_small(_sim_small_base):
+    return copy.deepcopy(_sim_small_base)
+
+
+@pytest.fixture
+def sim_percolating(_sim_percolating_base):
+    return copy.deepcopy(_sim_percolating_base)
