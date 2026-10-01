@@ -98,32 +98,54 @@ def find_electrode_nodes2(simulation: dict):
 # ==============================================================================
 # FUNCIONES DE PERCOLACIÓN Y CAMINOS
 # ==============================================================================
-def check_percolation(simulation: dict):
-    """ Verifica si existe al menos un camino que conecte entrada con salida. """
-    G = simulation["graph"]
-    input_nodes = simulation["terminals"]["input_nodes"]
-    output_nodes = simulation["terminals"]["output_nodes"]
+def check_percolation(simulation: dict) -> bool:
+    """Verifica si existe al menos un camino que conecte entrada con salida.
 
-    for in_node in input_nodes:
-        for out_node in output_nodes:
-            if nx.has_path(G, in_node, out_node):
-                return True
+    Se apoya en ``networkx.connected_components`` (O(V + E)) en lugar de
+    iterar todos los pares (input, output).
+    """
+    G = simulation["graph"]
+    input_set = set(simulation["terminals"]["input_nodes"])
+    output_set = set(simulation["terminals"]["output_nodes"])
+
+    if not input_set or not output_set:
+        return False
+
+    for component in nx.connected_components(G):
+        if component & input_set and component & output_set:
+            return True
     return False
 
 
-def get_shortest_path_length(simulation: dict):
-    """ Calcula la longitud topológica del camino más corto entre electrodos. """
+def get_shortest_path_length(simulation: dict) -> int | None:
+    """Longitud topológica del camino más corto entre cualquier par
+    (input_node, output_node).
+
+    Implementado como BFS multi-fuente: se inicializa la cola con todos
+    los nodos de entrada simultáneamente y se corta al alcanzar el primer
+    nodo de salida. Complejidad O(V + E) en lugar de O(|I|·|O|·(V + E)).
+    """
+    from collections import deque
+
     G = simulation["graph"]
     input_nodes = simulation["terminals"]["input_nodes"]
     output_nodes = simulation["terminals"]["output_nodes"]
 
-    best_length = float('inf')
-    for in_node in input_nodes:
-        for out_node in output_nodes:
-            try:
-                length = nx.shortest_path_length(G, source=in_node, target=out_node)
-                if length < best_length:
-                    best_length = length
-            except nx.NetworkXNoPath:
-                continue
-    return best_length if best_length != float('inf') else None
+    if not input_nodes or not output_nodes:
+        return None
+
+    output_set = set(output_nodes)
+    visited: dict = dict.fromkeys(input_nodes, 0)
+    queue: deque = deque(input_nodes)
+
+    while queue:
+        node = queue.popleft()
+        dist = visited[node]
+        if node in output_set:
+            return dist
+        for neighbor in G.neighbors(node):
+            if neighbor not in visited:
+                visited[neighbor] = dist + 1
+                queue.append(neighbor)
+
+    return None
