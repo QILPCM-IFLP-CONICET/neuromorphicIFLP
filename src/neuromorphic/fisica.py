@@ -50,7 +50,7 @@ def build_admittance_matrix2(simulation: dict, v_input=None):
             # Lee G_OFF desde el diccionario
             conductance = data.get('conductance', p['G_OFF'])
         else:
-            # Lee R_WIRE_PER_LENGTH calculado con pi desde el diccionario    
+            # Lee R_WIRE_PER_LENGTH calculado con pi desde el diccionario
             conductance = 1.0 / (data['weight'] * p['R_WIRE_PER_LENGTH'] + 1e-12)
 
         Y[u_idx, v_idx] -= conductance
@@ -138,7 +138,7 @@ def update_stochastic_conductance2(simulation: dict, V_solved):
             if np.random.rand() < p_decay:
                 edges_to_reset.append((u, v))
 
-    # Aplicar cambios en lote                
+    # Aplicar cambios en lote
     for u, v in edges_to_set:
         G.edges[u, v]['conductance'] = p['G_ON']
     for u, v in edges_to_reset:

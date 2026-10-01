@@ -1,8 +1,8 @@
 # simulador.py
-import numpy as np
 from scipy.sparse.linalg import spsolve
 
 from . import fisica as fis
+from .grafo import check_percolation
 
 
 # ==============================================================================
@@ -25,6 +25,22 @@ def run_simulation_dynamic_pulse(simulation: dict):
             f"input_nodes={len(input_nodes)}, output_nodes={len(output_nodes)}"
         )
 
+
+    # --- Diagnóstico de conectividad ---
+    if not check_percolation(simulation):
+        # Estimar densidad vs umbral crítico
+        L = p['LENGTH']
+        A = p['AREA']
+        N = p['NUM_WIRES']
+        N_c = 5.7 * A / (L ** 2)
+        raise RuntimeError(
+            f"La red NO percola: no hay camino topológico entre electrodos.\n"
+            f"  Densidad actual : N = {N} (N·L²/A = {N * L**2 / A:.2f})\n"
+            f"  Umbral crítico  : N_c ≈ {N_c:.0f} (N·L²/A ≈ 5.7)\n"
+            f"  Sugerencia      : aumentar NUM_WIRES > {int(N_c * 1.3)} "
+            f"o agrandar LENGTH a > {int((5.7 * A / N) ** 0.5 * 1.3)} µm."
+        )
+
     N_orig_junctions = len(simulation["junctions"]["junctions"])
     print(f"--- Simulación de Red de Nanohilos N = {p['NUM_WIRES']} "
           f"(Pulso y Relajación - Fig 2b) ---")
@@ -32,7 +48,7 @@ def run_simulation_dynamic_pulse(simulation: dict):
           f"Inputs: {len(input_nodes)} | Outputs: {len(output_nodes)}")
 
     # Estado inicial explícito de los memristores
-    for u, v, data in G.edges(data=True):
+    for _, _, data in G.edges(data=True):
         if data.get('is_memristor', False):
             data['conductance'] = p['G_OFF']
 
@@ -55,7 +71,7 @@ def run_simulation_dynamic_pulse(simulation: dict):
         v_now = V_PULSE if current_time <= T_PULSE else V_READ
 
         # 1) Resolver el circuito con el voltaje actual
-        Y, I_vec, n2i = fis.build_admittance_matrix2(simulation, v_input=v_now)
+        Y, I_vec, _ = fis.build_admittance_matrix2(simulation, v_input=v_now)
         try:
             V_vec = spsolve(Y, I_vec)
         except Exception as e:

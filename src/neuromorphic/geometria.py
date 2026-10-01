@@ -51,8 +51,8 @@ def generate_and_find_junctions(simulation:dict):
     wires = []
     for i in range(num_wires):
         wires.append({
-            'id': i, 
-            'p1': np.array((xc[i] - x_off[i], yc[i] - y_off[i])), 
+            'id': i,
+            'p1': np.array((xc[i] - x_off[i], yc[i] - y_off[i])),
             'p2': np.array((xc[i] + x_off[i], yc[i] + y_off[i]))
         })
 

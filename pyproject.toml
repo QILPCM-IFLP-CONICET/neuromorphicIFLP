@@ -7,24 +7,20 @@ name = "neuromorphic-nwlamas"
 version = "0.1.0"
 description = "Neuromorphic nanowire network simulator for stochastic generation, topology modeling, and electrical/dynamic simulation"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 license = { text = "MIT" }
 authors = [
     { name = "QILPCM-IFLP-CONICET" }
 ]
 keywords = [
-    "neuromorphic",
-    "nanowires",
-    "network-simulation",
-    "memristors",
-    "electrical-simulation",
-    "stochastic-modeling",
+    "neuromorphic", "nanowires", "network-simulation",
+    "memristors", "electrical-simulation", "stochastic-modeling",
 ]
 dependencies = [
-    "numpy>=1.21.0",
-    "scipy>=1.7.0",
+    "numpy>=1.24",
+    "scipy>=1.10",
     "networkx>=3.0",
-    "matplotlib>=3.5.0",
+    "matplotlib>=3.7",
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -32,25 +28,65 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Physics",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
 ]
 
 [project.optional-dependencies]
 dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
-    "black>=23.0",
-    "flake8>=6.0",
+    "ruff>=0.5",
     "mypy>=1.0",
 ]
 
-[tool.setuptools]
-include-package-data = true
+[project.urls]
+Homepage = "https://github.com/QILPCM-IFLP-CONICET/neuromorphicNWLamas"
+Repository = "https://github.com/QILPCM-IFLP-CONICET/neuromorphicNWLamas"
 
 [tool.setuptools.packages.find]
-where = ["."]
-include = ["neuromorphic*"]
+where = ["src"]
+
+[tool.setuptools.package-data]
+neuromorphic = ["*.ini"]
+
+# ---------------------------------------------------------------------------
+# pytest
+# ---------------------------------------------------------------------------
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+filterwarnings = [
+    "error::DeprecationWarning",
+]
+
+# ---------------------------------------------------------------------------
+# coverage
+# ---------------------------------------------------------------------------
+[tool.coverage.run]
+source = ["neuromorphic"]
+branch = true
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+]
+
+# ---------------------------------------------------------------------------
+# ruff (reemplaza flake8 + isort + black en un solo tool)
+# ---------------------------------------------------------------------------
+[tool.ruff]
+src = ["src", "tests"]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "C4", "SIM", "RUF"]
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101"]  # asserts permitidos en tests

@@ -1,16 +1,17 @@
-from . import geometria
-from . import grafo
+from . import geometria, grafo, simulador
 from .fisica import update_stochastic_conductance2
-from . import simulador
-from .simulation import setup_simulation
 from .simulador import run_simulation_dynamic_pulse
+from .simulation import setup_simulation
 from .visualizacion import plot_simulation_results
 
 __version__ = "0.1.0"
 
 __all__ = [
-    "setup_simulation",
-    "update_stochastic_conductance2",
-    "run_simulation_dynamic_pulse",
+    "geometria",
+    "grafo",
     "plot_simulation_results",
+    "run_simulation_dynamic_pulse",
+    "setup_simulation",
+    "simulador",
+    "update_stochastic_conductance2",
 ]

@@ -1,6 +1,6 @@
 # visualizacion.py
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 
 
 def plot_simulation_results(simulation, history_time, history_G_total):
