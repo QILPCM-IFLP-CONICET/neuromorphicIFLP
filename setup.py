@@ -7,10 +7,10 @@ setup(
     packages=find_packages(include=["neuromorphic", "neuromorphic.*"]),
     include_package_data=True,
     install_requires=[
-        "numpy>=1.21.0",
+        "numpy>=1.24.0",
         "scipy>=1.7.0",
         "networkx>=3.0",
         "matplotlib>=3.5.0",
     ],
-    python_requires=">=3.8",
+    python_requires=">=3.10",
 )
