@@ -16,8 +16,8 @@ def build_admittance_matrix2(simulation:dict):
     p = simulation["parameters"]
     G=simulation["graph"]
     terminals = simulation["terminals"]
-    terminals["input_nodes"]=input_nodes
-    terminals["output_nodes"]=output_nodes
+    input_nodes = terminals["input_nodes"]
+    output_nodes = terminals["output_nodes"]
     
     N = G.number_of_nodes()
     node_to_index = {node: i for i, node in enumerate(G.nodes)}

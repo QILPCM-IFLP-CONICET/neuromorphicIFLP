@@ -2,7 +2,16 @@
 import configparser
 import numpy as np
 
+from pathlib import Path
+
+PACKAGE_DIR = Path(__file__).resolve().parent
+
 def cargar_parametros(filepath="config.ini"):
+    path = Path(filepath)
+    if not path.is_absolute() and not path.exists():
+        candidate = PACKAGE_DIR / filepath
+        if candidate.exists():
+            filepath = str(candidate)
     config = configparser.ConfigParser()
     config.read(filepath)
     

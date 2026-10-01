@@ -19,10 +19,10 @@ def build_graph2(simulation:dict):
         el mismo nanohilo en uniones adyacentes.
     '''
     p = simulation["parameters"]
-    junctions = simulation["junctions"]
-    wires = junctions["wires"]
-    junctions=junctions["junctions"]
-    wire_to_junctions = junctions["wire_to_junctions"]
+    junction_data = simulation["junctions"]
+    wires = junction_data["wires"]
+    junctions=junction_data["junctions"]
+    wire_to_junctions = junction_data["wire_to_junctions"]
     
     G = nx.Graph()
 

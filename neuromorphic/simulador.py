@@ -4,7 +4,7 @@ from scipy.sparse.linalg import spsolve
 import matplotlib.pyplot as plt
 
 # Importamos nuestros módulos hermanos
-import .fisica as fis
+from . import fisica as fis
 
 
 
