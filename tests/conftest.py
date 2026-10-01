@@ -6,12 +6,14 @@ import copy
 
 import matplotlib
 
+from neuromorphic.simulador import run_simulation_dynamic_pulse
+
 matplotlib.use("Agg")  # headless backend for CI
 
-import numpy as np  # noqa: E402
-import pytest  # noqa: E402
+import numpy as np
+import pytest
 
-from neuromorphic import setup_simulation  # noqa: E402
+from neuromorphic import setup_simulation
 
 
 @pytest.fixture(autouse=True)
@@ -72,7 +74,7 @@ def sim_percolating(_sim_percolating_base):
     return copy.deepcopy(_sim_percolating_base)
 
 
-from neuromorphic.simulador import run_simulation_dynamic_pulse
+
 
 
 @pytest.fixture(scope="session")
