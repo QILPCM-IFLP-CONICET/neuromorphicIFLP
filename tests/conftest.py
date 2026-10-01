@@ -1,4 +1,5 @@
 """Shared pytest fixtures."""
+
 from __future__ import annotations
 
 import copy
@@ -69,3 +70,19 @@ def sim_small(_sim_small_base):
 @pytest.fixture
 def sim_percolating(_sim_percolating_base):
     return copy.deepcopy(_sim_percolating_base)
+
+
+from neuromorphic.simulador import run_simulation_dynamic_pulse
+
+
+@pytest.fixture(scope="session")
+def _pulse_run(_sim_percolating_base):
+    """Run the pulse simulation once and share (sim, t, g, active).
+
+    The simulation mutates the graph in place, so we run it on a deepcopy
+    of the session-scoped base. The returned ``sim`` is the mutated copy;
+    do NOT share it with tests that need a pristine graph.
+    """
+    sim = copy.deepcopy(_sim_percolating_base)
+    t, g, active = run_simulation_dynamic_pulse(sim)
+    return sim, t, g, active

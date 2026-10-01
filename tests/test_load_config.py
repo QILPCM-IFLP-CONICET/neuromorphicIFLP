@@ -1,4 +1,5 @@
 """Tests for neuromorphic.load_config."""
+
 from __future__ import annotations
 
 import warnings
@@ -106,36 +107,38 @@ def test_missing_filepath_raises(tmp_path):
 def test_explicit_filepath_is_used(tmp_path):
     ini = tmp_path / "custom.ini"
     ini.write_text(
-        "\n".join([
-            "[Network]",
-            "num_wires = 999",
-            "area = 1000.0",
-            "length = 70.0",
-            "proximity_threshold_ratio = 0.05",
-            "",
-            "[Electrical]",
-            "v_input = 3.6",
-            "v_ground = 0.0",
-            "v_read = 0.05",
-            "rho_plata = 0.0159",
-            "diametro_nm = 115.0",
-            "",
-            "[Time]",
-            "time_step_dt = 1e-3",
-            "t_pulse = 10.0",
-            "t_relax = 40.0",
-            "",
-            "[Memristor]",
-            "g_on = 1e-3",
-            "g_off = 1e-9",
-            "v_threshold = 0.01",
-            "",
-            "[Probabilities]",
-            "p0_set = 0.4",
-            "alpha_set = 1.0",
-            "p_decay = 0.8",
-            "beta_reset = 1.0",
-        ]),
+        "\n".join(
+            [
+                "[Network]",
+                "num_wires = 999",
+                "area = 1000.0",
+                "length = 70.0",
+                "proximity_threshold_ratio = 0.05",
+                "",
+                "[Electrical]",
+                "v_input = 3.6",
+                "v_ground = 0.0",
+                "v_read = 0.05",
+                "rho_plata = 0.0159",
+                "diametro_nm = 115.0",
+                "",
+                "[Time]",
+                "time_step_dt = 1e-3",
+                "t_pulse = 10.0",
+                "t_relax = 40.0",
+                "",
+                "[Memristor]",
+                "g_on = 1e-3",
+                "g_off = 1e-9",
+                "v_threshold = 0.01",
+                "",
+                "[Probabilities]",
+                "p0_set = 0.4",
+                "alpha_set = 1.0",
+                "p_decay = 0.8",
+                "beta_reset = 1.0",
+            ]
+        ),
         encoding="utf-8",
     )
     result = cargar_parametros(filepath=ini)

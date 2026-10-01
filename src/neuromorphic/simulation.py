@@ -1,5 +1,6 @@
 # simulation.py
 """High-level entry point that assembles a simulation dict."""
+
 from __future__ import annotations
 
 from typing import Any

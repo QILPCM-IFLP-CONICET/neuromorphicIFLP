@@ -7,7 +7,7 @@ from scipy.sparse import lil_matrix
 # CONSTRUCCIÓN DE LA MATRIZ DE ADMITANCIA (SPARSE)
 # ==============================================================================
 def build_admittance_matrix2(simulation: dict, v_input=None):
-    '''
+    """
     Construye la matriz de admitancia del circuito usando representaciones
     dispersas (CSR). Lee todos los parámetros desde simulation["parameters"].
 
@@ -25,7 +25,7 @@ def build_admittance_matrix2(simulation: dict, v_input=None):
     Y : scipy.sparse.csr_matrix
     I_vec : np.ndarray
     node_to_index : dict
-    '''
+    """
     p = simulation["parameters"]
     G = simulation["graph"]
     terminals = simulation["terminals"]
@@ -33,8 +33,8 @@ def build_admittance_matrix2(simulation: dict, v_input=None):
     output_nodes = terminals["output_nodes"]
 
     if v_input is None:
-        v_input = p['V_INPUT']
-    v_ground = p['V_GROUND']
+        v_input = p["V_INPUT"]
+    v_ground = p["V_GROUND"]
 
     N = G.number_of_nodes()
     node_to_index = {node: i for i, node in enumerate(G.nodes)}
@@ -46,12 +46,12 @@ def build_admittance_matrix2(simulation: dict, v_input=None):
     for u, v, data in G.edges(data=True):
         u_idx, v_idx = node_to_index[u], node_to_index[v]
 
-        if data.get('is_memristor', False):
+        if data.get("is_memristor", False):
             # Lee G_OFF desde el diccionario
-            conductance = data.get('conductance', p['G_OFF'])
+            conductance = data.get("conductance", p["G_OFF"])
         else:
             # Lee R_WIRE_PER_LENGTH calculado con pi desde el diccionario
-            conductance = 1.0 / (data['weight'] * p['R_WIRE_PER_LENGTH'] + 1e-12)
+            conductance = 1.0 / (data["weight"] * p["R_WIRE_PER_LENGTH"] + 1e-12)
 
         Y[u_idx, v_idx] -= conductance
         Y[v_idx, u_idx] -= conductance
@@ -97,14 +97,14 @@ def build_admittance_matrix2(simulation: dict, v_input=None):
 # ACTUALIZACIÓN ESTOCÁSTICA DE MEMRISTORES
 # ==============================================================================
 def update_stochastic_conductance2(simulation: dict, V_solved):
-    '''
+    """
     Aplica la dinámica estocástica de conmutación volátil y disolución de
     filamentos. Muta simulation["graph"] in-place.
 
     Returns
     -------
     G : networkx.Graph (el mismo objeto, mutado)
-    '''
+    """
     p = simulation["parameters"]
     G = simulation["graph"]
     node_to_index = simulation["circuit"]["node_to_index"]
@@ -113,36 +113,34 @@ def update_stochastic_conductance2(simulation: dict, V_solved):
     edges_to_reset = []
 
     for u, v, data in G.edges(data=True):
-        if not data.get('is_memristor', False):
+        if not data.get("is_memristor", False):
             continue
 
         u_idx, v_idx = node_to_index[u], node_to_index[v]
         V_mem = abs(V_solved[u_idx] - V_solved[v_idx])
-        current_G = data.get('conductance', p['G_OFF'])
+        current_G = data.get("conductance", p["G_OFF"])
 
         # --- SET (Facilitación) ---
-        if current_G == p['G_OFF']:
-            if V_mem > p['V_THRESHOLD']:
+        if current_G == p["G_OFF"]:
+            if V_mem > p["V_THRESHOLD"]:
                 # Probabilidad exponencial basada en la activación iónica (Ag+)
-                p_set = p['P0_SET'] * np.exp(
-                    p['ALPHA_SET'] * np.abs(V_mem - p['V_THRESHOLD'])
-                )
+                p_set = p["P0_SET"] * np.exp(p["ALPHA_SET"] * np.abs(V_mem - p["V_THRESHOLD"]))
                 if np.random.rand() < p_set:
                     edges_to_set.append((u, v))
 
         # --- RESET (Relajación volátil) ---
-        elif current_G == p['G_ON']:
+        elif current_G == p["G_ON"]:
             #  Factor de estabilidad: disminuye el decay si hay voltaje suficiente
-            estabilidad = np.exp(-np.abs(V_mem) / p['V_THRESHOLD'])
-            p_decay = p['P_DECAY'] * estabilidad
+            estabilidad = np.exp(-np.abs(V_mem) / p["V_THRESHOLD"])
+            p_decay = p["P_DECAY"] * estabilidad
             if np.random.rand() < p_decay:
                 edges_to_reset.append((u, v))
 
     # Aplicar cambios en lote
     for u, v in edges_to_set:
-        G.edges[u, v]['conductance'] = p['G_ON']
+        G.edges[u, v]["conductance"] = p["G_ON"]
     for u, v in edges_to_reset:
-        G.edges[u, v]['conductance'] = p['G_OFF']
+        G.edges[u, v]["conductance"] = p["G_OFF"]
 
     return G
 
@@ -151,14 +149,14 @@ def update_stochastic_conductance2(simulation: dict, V_solved):
 # CÁLCULOS DE CORRIENTES
 # ==============================================================================
 def _edge_conductance(data, p):
-    ''' Conductancia de una arista: memristor (dinámica) o segmento resistivo. '''
-    if data.get('is_memristor', False):
-        return data.get('conductance', p['G_OFF'])
-    return 1.0 / (data['weight'] * p['R_WIRE_PER_LENGTH'] + 1e-12)
+    """Conductancia de una arista: memristor (dinámica) o segmento resistivo."""
+    if data.get("is_memristor", False):
+        return data.get("conductance", p["G_OFF"])
+    return 1.0 / (data["weight"] * p["R_WIRE_PER_LENGTH"] + 1e-12)
 
 
 def calculate_input_current(simulation: dict, V_solved):
-    ''' Corriente neta que sale de los nodos de entrada hacia el resto de la red. '''
+    """Corriente neta que sale de los nodos de entrada hacia el resto de la red."""
     p = simulation["parameters"]
     G = simulation["graph"]
     node_to_index = simulation["circuit"]["node_to_index"]
@@ -179,7 +177,7 @@ def calculate_input_current(simulation: dict, V_solved):
 
 
 def calculate_output_current(simulation: dict, V_solved):
-    ''' Corriente neta que entra a los nodos de salida desde el resto de la red. '''
+    """Corriente neta que entra a los nodos de salida desde el resto de la red."""
     p = simulation["parameters"]
     G = simulation["graph"]
     node_to_index = simulation["circuit"]["node_to_index"]
@@ -203,5 +201,5 @@ def calculate_output_current(simulation: dict, V_solved):
 # SEÑALES DE ENTRADA EXTRA
 # ==============================================================================
 def get_v_ramp(t, total_time, amplitude):
-    ''' Señal senoidal para el ciclo de histéresis. '''
+    """Señal senoidal para el ciclo de histéresis."""
     return amplitude * np.sin(2 * np.pi * t / total_time)

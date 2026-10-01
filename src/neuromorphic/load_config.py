@@ -12,6 +12,7 @@ Design
 Unknown keys in ``parms`` trigger an ``UnknownParameterWarning`` and are
 ignored (they do not override anything).
 """
+
 from __future__ import annotations
 
 import configparser
@@ -31,24 +32,42 @@ class UnknownParameterWarning(UserWarning):
 
 # Keys exposed in the parameter dict. Kept explicit so that typos in
 # ``parms`` are surfaced as warnings rather than silently ignored.
-KNOWN_RAW_KEYS: frozenset[str] = frozenset({
-    # Network
-    "NUM_WIRES", "AREA", "LENGTH", "PROXIMITY_THRESHOLD_RATIO",
-    # Electrical
-    "V_INPUT", "V_GROUND", "V_READ", "RHO_PLATA", "DIAMETRO_NM",
-    # Time
-    "TIME_STEP_DT", "T_PULSE", "T_RELAX",
-    # Memristor
-    "G_ON", "G_OFF", "V_THRESHOLD",
-    # Probabilities
-    "P0_SET", "ALPHA_SET", "P_DECAY", "BETA_RESET",
-})
+KNOWN_RAW_KEYS: frozenset[str] = frozenset(
+    {
+        # Network
+        "NUM_WIRES",
+        "AREA",
+        "LENGTH",
+        "PROXIMITY_THRESHOLD_RATIO",
+        # Electrical
+        "V_INPUT",
+        "V_GROUND",
+        "V_READ",
+        "RHO_PLATA",
+        "DIAMETRO_NM",
+        # Time
+        "TIME_STEP_DT",
+        "T_PULSE",
+        "T_RELAX",
+        # Memristor
+        "G_ON",
+        "G_OFF",
+        "V_THRESHOLD",
+        # Probabilities
+        "P0_SET",
+        "ALPHA_SET",
+        "P_DECAY",
+        "BETA_RESET",
+    }
+)
 
-DERIVED_KEYS: frozenset[str] = frozenset({
-    "PROXIMITY_THRESHOLD",
-    "R_WIRE_PER_LENGTH",
-    "TOTAL_TIME",
-})
+DERIVED_KEYS: frozenset[str] = frozenset(
+    {
+        "PROXIMITY_THRESHOLD",
+        "R_WIRE_PER_LENGTH",
+        "TOTAL_TIME",
+    }
+)
 
 
 # ---------------------------------------------------------------------------
@@ -101,8 +120,7 @@ def _load_defaults() -> dict[str, Any]:
     ini = files("neuromorphic").joinpath(DEFAULT_INI_NAME)
     if not ini.is_file():
         raise FileNotFoundError(
-            f"Packaged {DEFAULT_INI_NAME} not found. "
-            "The package is likely broken; reinstall it."
+            f"Packaged {DEFAULT_INI_NAME} not found. The package is likely broken; reinstall it."
         )
     with ini.open("r", encoding="utf-8") as fh:
         return _parse_ini(fh)
@@ -126,9 +144,7 @@ def _parse_ini(fh) -> dict[str, Any]:
     params["NUM_WIRES"] = config.getint("Network", "num_wires")
     params["AREA"] = config.getfloat("Network", "area")
     params["LENGTH"] = config.getfloat("Network", "length")
-    params["PROXIMITY_THRESHOLD_RATIO"] = config.getfloat(
-        "Network", "proximity_threshold_ratio"
-    )
+    params["PROXIMITY_THRESHOLD_RATIO"] = config.getfloat("Network", "proximity_threshold_ratio")
 
     # Electrical
     params["V_INPUT"] = config.getfloat("Electrical", "v_input")
@@ -158,11 +174,7 @@ def _parse_ini(fh) -> dict[str, Any]:
 
 def _recompute_derived(params: dict[str, Any]) -> None:
     """Recalculate derived values in-place from raw keys."""
-    params["PROXIMITY_THRESHOLD"] = (
-        params["PROXIMITY_THRESHOLD_RATIO"] * params["AREA"]
-    )
+    params["PROXIMITY_THRESHOLD"] = params["PROXIMITY_THRESHOLD_RATIO"] * params["AREA"]
     radio_um = (params["DIAMETRO_NM"] / 2.0) * 1e-3
-    params["R_WIRE_PER_LENGTH"] = (
-        params["RHO_PLATA"] / (np.pi * radio_um**2)
-    )
+    params["R_WIRE_PER_LENGTH"] = params["RHO_PLATA"] / (np.pi * radio_um**2)
     params["TOTAL_TIME"] = params["T_PULSE"] + params["T_RELAX"]
