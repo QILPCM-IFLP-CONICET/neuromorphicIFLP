@@ -22,7 +22,8 @@ def setup_simulation(
         Path to an explicit ``.ini`` file. If ``None``, the packaged
         defaults are used.
     parms : dict, optional
-        Parameter overrides applied on top of the file.
+        Parameter overrides applied on top of the file. Unknown keys
+        emit an ``UnknownParameterWarning`` and are ignored.
 
     Returns
     -------

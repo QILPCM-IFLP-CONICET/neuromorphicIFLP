@@ -3,13 +3,14 @@
 
 Design
 ------
-- ``load_defaults()`` reads the ``.ini`` bundled with the package.
-- ``load_config(path)`` reads an explicit user-provided ``.ini``.
+- ``_load_defaults()`` reads the ``.ini`` bundled with the package.
+- ``_load_ini(path)`` reads an explicit user-provided ``.ini``.
 - ``cargar_parametros(filepath=None, parms=None)`` is the single public
   entry point. It never searches the current working directory
   implicitly: if ``filepath`` is None, only the package defaults are used.
 
-Unknown keys in ``parms`` trigger a ``UserWarning`` and are ignored.
+Unknown keys in ``parms`` trigger an ``UnknownParameterWarning`` and are
+ignored (they do not override anything).
 """
 from __future__ import annotations
 
@@ -25,7 +26,7 @@ DEFAULT_INI_NAME = "defaults.ini"
 
 
 class UnknownParameterWarning(UserWarning):
-    """Raised when ``parms`` contains keys not present in the loaded file."""
+    """Emitted when ``parms`` contains keys not present in the loaded file."""
 
 
 # Keys exposed in the parameter dict. Kept explicit so that typos in
@@ -73,10 +74,8 @@ def cargar_parametros(
     dict
         ``{"parameters": {...}}`` with raw and derived values.
     """
-    if filepath is None:
-        params = _load_defaults()
-    else:
-        params = _load_ini(Path(filepath))
+
+    params = _load_defaults() if filepath is None else _load_ini(Path(filepath))
 
     if parms is not None:
         unknown = set(parms) - KNOWN_RAW_KEYS

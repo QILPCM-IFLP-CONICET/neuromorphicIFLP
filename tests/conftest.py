@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import matplotlib
 
-matplotlib.use("Agg")  # backend sin display, para CI
+matplotlib.use("Agg")  # headless backend for CI
 
 import pytest
 
@@ -12,7 +12,7 @@ from neuromorphic import setup_simulation
 
 @pytest.fixture
 def small_params() -> dict:
-    """Params for a fast, non-percolating test network."""
+    """Fast, non-percolating test network."""
     return {
         "NUM_WIRES": 200,
         "T_PULSE": 0.1,
@@ -23,7 +23,7 @@ def small_params() -> dict:
 
 @pytest.fixture
 def percolating_params() -> dict:
-    """Params for a percolating test network (above percolation threshold)."""
+    """Percolating test network, above the percolation threshold."""
     return {
         "NUM_WIRES": 1200,
         "T_PULSE": 0.05,

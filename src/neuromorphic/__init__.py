@@ -7,8 +7,8 @@ from .visualizacion import plot_simulation_results
 __version__ = "0.1.0"
 
 __all__ = [
-    "setup_simulation",
-    "run_simulation_dynamic_pulse",
     "plot_simulation_results",
+    "run_simulation_dynamic_pulse",
+    "setup_simulation",
     "update_stochastic_conductance2",
 ]

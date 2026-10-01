@@ -7,10 +7,13 @@ import numpy as np
 # ==============================================================================
 def generate_and_find_junctions(simulation:dict):
     '''
-    La función se encarga de simular la disposición de nanohilos en un área cuadrada y encontrar todos los puntos donde estos nanohilos se cruzan.
-    Usa los parámetros centralizados en config.ini a través del diccionario 'p'.
+    La función se encarga de simular la disposición de nanohilos
+    en un área cuadrada y encontrar todos los puntos donde estos
+    nanohilos se cruzan.
+    Usa los parámetros centralizados en config.ini a través del
+    diccionario 'p'.
 
-    devuelve tres estructuras principales:
+    Devuelve tres estructuras principales:
 
     *wires*:
         Es una lista de diccionarios, donde cada diccionario representa un nanohilo.
@@ -18,20 +21,25 @@ def generate_and_find_junctions(simulation:dict):
 
         'id': Un identificador único para el nanohilo.
         'p1': Un array NumPy que representa las coordenadas (x, y) del primer extremo del nanohilo.
-        'p2': Un array NumPy que representa las coordenadas (x, y) del segundo extremo del nanohilo.
+        'p2': Un array NumPy que representa las coordenadas (x, y)
+         del segundo extremo del nanohilo.
 
 
     *junctions*:
-        Es una lista de diccionarios, donde cada diccionario representa un punto de cruce o unión entre dos nanohilos.
+        Es una lista de diccionarios, donde cada diccionario representa
+        un punto de cruce o unión entre dos nanohilos.
         Cada unión contiene:
 
         'id': Un identificador único para la unión.
-        'pos': Un array NumPy con las coordenadas (x, y) exactas del punto de intersección.
-        'wires': Una tupla con los IDs de los dos nanohilos que se cruzan en esa unión.
+        'pos': Un array NumPy con las coordenadas (x, y) exactas del
+        punto de intersección.
+        'wires': Una tupla con los IDs de los dos nanohilos que se
+         cruzan en esa unión.
 
 
     *wire_to_junctions*:
-        Es un diccionario que mapea el ID de cada nanohilo a una lista de todas las uniones en las que participa ese nanohilo.
+        Es un diccionario que mapea el ID de cada nanohilo a una lista
+        de todas las uniones en las que participa ese nanohilo.
         Esto es útil para navegar por las uniones a lo largo de un nanohilo específico.
     '''
     # Extraemos las variables del diccionario centralizado
