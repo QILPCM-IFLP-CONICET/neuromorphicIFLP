@@ -121,7 +121,7 @@ from neuromorphic import (
     setup_simulation,
     run_simulation_dynamic_pulse,
     plot_simulation_results,
-    update_stochastic_conductance2,
+    update_stochastic_conductance,
 )
 ```
 

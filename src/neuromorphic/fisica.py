@@ -143,7 +143,7 @@ def update_stochastic_conductance(simulation: dict[str, Any], V_solved):
 
     See Also
     --------
-    build_admittance_matrix2 : construye el sistema que produce ``V_solved``.
+    build_admittance_matrix : construye el sistema que produce ``V_solved``.
     """
     p = simulation["parameters"]
     G = simulation["graph"]
