@@ -74,9 +74,6 @@ def sim_percolating(_sim_percolating_base):
     return copy.deepcopy(_sim_percolating_base)
 
 
-
-
-
 @pytest.fixture(scope="session")
 def _pulse_run(_sim_percolating_base):
     """Run the pulse simulation once and share (sim, t, g, active).
