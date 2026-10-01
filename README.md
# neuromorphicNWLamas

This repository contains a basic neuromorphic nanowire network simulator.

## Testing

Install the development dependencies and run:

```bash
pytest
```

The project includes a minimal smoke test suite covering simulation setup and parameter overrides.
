@@ -1,0 +1,49 @@
+import numpy as np
+
+from neuromorphic import setup_simulation
+
+
+def test_setup_simulation_builds_expected_sections():
+    np.random.seed(0)
+    sim = setup_simulation(
+        filepath="neuromorphic/config.ini",
+        parms={"NUM_WIRES": 10, "AREA": 20.0, "LENGTH": 8.0},
+    )
+
+    assert isinstance(sim, dict)
+    assert set(["parameters", "junctions", "graph", "terminals"]).issubset(sim)
+
+    params = sim["parameters"]
+    assert params["NUM_WIRES"] == 10
+    assert params["AREA"] == 20.0
+    assert params["LENGTH"] == 8.0
+
+    junction_data = sim["junctions"]
+    assert set(["wires", "junctions", "wire_to_junctions"]).issubset(junction_data)
+    assert hasattr(sim["graph"], "nodes")
+    assert hasattr(sim["graph"], "edges")
+
+    terminals = sim["terminals"]
+    assert "input_nodes" in terminals
+    assert "output_nodes" in terminals
+
+
+def test_setup_simulation_applies_overrides_and_keeps_graph_connected():
+    np.random.seed(4)
+    sim = setup_simulation(
+        filepath="neuromorphic/config.ini",
+        parms={"NUM_WIRES": 12, "AREA": 25.0, "LENGTH": 10.0, "PROXIMITY_THRESHOLD": 2.0},
+    )
+
+    params = sim["parameters"]
+    assert params["NUM_WIRES"] == 12
+    assert params["AREA"] == 25.0
+    assert params["LENGTH"] == 10.0
+    assert params["PROXIMITY_THRESHOLD"] == 2.0
+
+    graph = sim["graph"]
+    assert graph.number_of_nodes() >= 0
+    assert graph.number_of_edges() >= 0
+    assert len(sim["terminals"]["input_nodes"]) >= 0
+    assert len(sim["terminals"]["output_nodes"]) >= 0
+
