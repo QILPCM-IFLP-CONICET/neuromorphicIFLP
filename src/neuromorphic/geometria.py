@@ -1,50 +1,51 @@
 # geometria.py
 from typing import Any
+
 import numpy as np
 
 
 # ==============================================================================
 # FUNCIONES DE GEOMETRÍA Y RED
 # ==============================================================================
-def generate_and_find_junctions(simulation: dict[str, Any]):
-    """
-    La función se encarga de simular la disposición de nanohilos
-    en un área cuadrada y encontrar todos los puntos donde estos
-    nanohilos se cruzan.
-    Usa los parámetros centralizados en config.ini a través del
-    diccionario 'p'.
+def generate_and_find_junctions(simulation: dict[str, Any]) -> None:
+    """Genera la disposición espacial de los nanohilos y encuentra sus cruces.
 
-    Devuelve tres estructuras principales:
+    Coloca ``NUM_WIRES`` hilos con centros uniformemente distribuidos en un
+    área cuadrada de lado ``AREA`` y orientaciones uniformes en
+    :math:`[0, \\pi)`. Detecta los cruces entre pares de segmentos por
+    intersección analítica (fuerza bruta :math:`O(N^2)`).
 
-    *wires*:
-        Es una lista de diccionarios, donde cada diccionario representa un nanohilo.
-        Cada nanohilo tiene:
+    Parameters
+    ----------
+    simulation : dict
+        Diccionario de simulación. Debe contener ``"parameters"`` con las
+        claves ``NUM_WIRES``, ``AREA`` y ``LENGTH``.
 
-        'id': Un identificador único para el nanohilo.
-        'p1': Un array NumPy que representa las coordenadas (x, y) del primer extremo del nanohilo.
-        'p2': Un array NumPy que representa las coordenadas (x, y)
-         del segundo extremo del nanohilo.
+    Returns
+    -------
+    None
+        Modifica ``simulation`` in-place agregando la clave ``"junctions"``,
+        un diccionario con:
 
+        - ``wires`` : list of dict
+            Cada entrada contiene ``id`` (int), ``p1`` y ``p2`` (``ndarray``
+            de shape ``(2,)``) con las coordenadas de los extremos.
+        - ``junctions`` : list of dict
+            Cada entrada contiene ``id`` (int), ``pos`` (``ndarray`` de
+            shape ``(2,)``) y ``wires`` (``tuple[int, int]``) con los IDs
+            de los dos hilos que se cruzan.
+        - ``wire_to_junctions`` : dict of list
+            Mapa de adyacencia que asocia cada ID de hilo con la lista de
+            junturas que lo atraviesan.
 
-    *junctions*:
-        Es una lista de diccionarios, donde cada diccionario representa
-        un punto de cruce o unión entre dos nanohilos.
-        Cada unión contiene:
-
-        'id': Un identificador único para la unión.
-        'pos': Un array NumPy con las coordenadas (x, y) exactas del
-        punto de intersección.
-        'wires': Una tupla con los IDs de los dos nanohilos que se
-         cruzan en esa unión.
-
-
-    *wire_to_junctions*:
-        Es un diccionario que mapea el ID de cada nanohilo a una lista
-        de todas las uniones en las que participa ese nanohilo.
-        Esto es útil para navegar por las uniones a lo largo de un nanohilo específico.
+    Notes
+    -----
+    La detección por fuerza bruta es aceptable para :math:`N \\lesssim 10^4`.
+    Para redes más densas conviene vectorizar el cálculo de intersecciones
+    con NumPy.
     """
     # Extraemos las variables del diccionario centralizado
-    p :dict[str, Any] = simulation["parameters"]
+    p: dict[str, Any] = simulation["parameters"]
     num_wires: int = p["NUM_WIRES"]
     wire_length: float = p["LENGTH"]
     area_size: float = p["AREA"]
@@ -57,7 +58,7 @@ def generate_and_find_junctions(simulation: dict[str, Any]):
     x_off = (wire_length / 2) * np.cos(theta)
     y_off = (wire_length / 2) * np.sin(theta)
 
-    wires:list[dict[str,Any]] = []
+    wires: list[dict[str, Any]] = []
     for i in range(num_wires):
         wires.append(
             {
@@ -68,7 +69,7 @@ def generate_and_find_junctions(simulation: dict[str, Any]):
         )
 
     junctions: list[dict[str, Any]] = []
-    wire_to_junctions:dict[int,list[dict[str, Any]]] = {i: [] for i in range(num_wires)}
+    wire_to_junctions: dict[int, list[dict[str, Any]]] = {i: [] for i in range(num_wires)}
     junction_id_counter = 0
 
     # Detección de intersecciones por fuerza bruta

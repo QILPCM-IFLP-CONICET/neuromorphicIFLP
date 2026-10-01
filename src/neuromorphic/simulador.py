@@ -1,4 +1,6 @@
 # simulador.py
+from typing import Any
+
 from scipy.sparse.linalg import spsolve
 
 from . import fisica as fis
@@ -8,10 +10,39 @@ from .grafo import check_percolation
 # ==============================================================================
 # SIMULACIÓN DE PULSOS DINÁMICOS
 # ==============================================================================
-def run_simulation_dynamic_pulse(simulation: dict):
-    """
-    Ejecuta la simulación dinámica de pulso y relajación (Fig 2b del paper).
-    Todos los parámetros se leen desde simulation["parameters"].
+def run_simulation_dynamic_pulse(simulation: dict[str, Any]):
+    """Ejecuta el experimento de pulso y relajación (Fig. 2b).
+
+    Somete la red a un voltaje alto ``V_INPUT`` durante ``T_PULSE``
+    segundos (fase de facilitación) y luego a un voltaje bajo ``V_READ``
+    durante ``T_RELAX`` segundos (fase de relajación). En cada paso
+    temporal se resuelve el circuito, se registra la conductancia total
+    y se actualiza estocásticamente el estado de los memristores.
+
+    Parameters
+    ----------
+    simulation : dict
+        Diccionario de simulación. Debe contener ``"parameters"``,
+        ``"graph"``, ``"terminals"`` y ``"circuit"``.
+
+    Returns
+    -------
+    history_time : list of float
+        Instantes de tiempo registrados (s).
+    history_G_total : list of float
+        Conductancia equivalente total de la red en cada paso (mS).
+    history_active : list of int
+        Cantidad de memristores en estado ``ON`` en cada paso.
+
+    Raises
+    ------
+    RuntimeError
+        Si la red no tiene electrodos o si no percola topológicamente.
+
+    Notes
+    -----
+    El grafo en ``simulation["graph"]`` se muta in-place: los memristores
+    quedan con el estado final de la simulación.
     """
     p = simulation["parameters"]
     G = simulation["graph"]
