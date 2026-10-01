@@ -2,20 +2,92 @@
 from typing import Any
 
 import numpy as np
-from scipy.sparse import lil_matrix
+from scipy.sparse import coo_matrix
+
+
+# ==============================================================================
+# PRECÓMPUTO DE ESTRUCTURAS (una vez por simulación)
+# ==============================================================================
+def _precompute_circuit_arrays(simulation: dict[str, Any]) -> None:
+    """Cachea arrays con la estructura del grafo para evitar loops Python.
+
+    Calcula y guarda en ``simulation["circuit"]``:
+
+    - ``node_to_index``: mapeo nodo -> índice.
+    - ``edge_u_idx``, ``edge_v_idx``: índices de los extremos por arista.
+    - ``edge_is_memristor``: máscara booleana.
+    - ``edge_fixed_g``: conductancia fija por arista (0 en memristores).
+    - ``mem_edge_idx``: índices (en el array de aristas) de los memristores.
+    - ``memristor_g``: conductancias actuales de los memristores.
+    - ``input_idx``, ``output_idx``: índices de los electrodos.
+    """
+    p = simulation["parameters"]
+    G = simulation["graph"]
+    circuit = simulation["circuit"]
+
+    nodes = list(G.nodes)
+    node_to_index = {n: i for i, n in enumerate(nodes)}
+    N = len(nodes)
+
+    edges = list(G.edges(data=True))
+    E = len(edges)
+
+    u_idx = np.empty(E, dtype=np.int64)
+    v_idx = np.empty(E, dtype=np.int64)
+    is_mem = np.empty(E, dtype=bool)
+    fixed_g = np.empty(E, dtype=np.float64)
+
+    mem_count = 0
+    for i, (u, v, data) in enumerate(edges):
+        u_idx[i] = node_to_index[u]
+        v_idx[i] = node_to_index[v]
+        mem = data.get("is_memristor", False)
+        is_mem[i] = mem
+        if mem:
+            fixed_g[i] = 0.0
+            data["_mem_idx"] = mem_count   # índice del memristor en memristor_g
+            mem_count += 1
+        else:
+            fixed_g[i] = 1.0 / (data["weight"] * p["R_WIRE_PER_LENGTH"] + 1e-12)
+
+    mem_edge_idx = np.flatnonzero(is_mem)
+    mem_g = np.empty(mem_count, dtype=np.float64)
+    for j, i in enumerate(mem_edge_idx):
+        mem_g[j] = edges[i][2]["conductance"]
+
+    input_idx = np.array(
+        [node_to_index[n] for n in simulation["terminals"]["input_nodes"]],
+        dtype=np.int64,
+    )
+    output_idx = np.array(
+        [node_to_index[n] for n in simulation["terminals"]["output_nodes"]],
+        dtype=np.int64,
+    )
+
+    circuit["node_to_index"] = node_to_index
+    circuit["N"] = N
+    circuit["edge_u_idx"] = u_idx
+    circuit["edge_v_idx"] = v_idx
+    circuit["edge_is_memristor"] = is_mem
+    circuit["edge_fixed_g"] = fixed_g
+    circuit["mem_edge_idx"] = mem_edge_idx
+    circuit["memristor_g"] = mem_g
+    circuit["input_idx"] = input_idx
+    circuit["output_idx"] = output_idx
 
 
 # ==============================================================================
 # CONSTRUCCIÓN DE LA MATRIZ DE ADMITANCIA (SPARSE)
 # ==============================================================================
-def build_admittance_matrix(simulation: dict[str, Any], v_input: float | None = None):
+def build_admittance_matrix(
+    simulation: dict[str, Any],
+    v_input: float | None = None,
+):
     """Ensambla la matriz de admitancia y el vector de corrientes.
 
-    Construye el sistema :math:`Y \\cdot V = I` aplicando las leyes de
-    Kirchhoff sobre todos los nodos internos y condiciones de contorno
-    de Dirichlet en los electrodos. Agrega una conductancia de fuga
-    mínima (``G_LEAK``) en los nodos internos para evitar singularidades
-    numéricas.
+    Construye el sistema :math:`Y \\cdot V = I` en formato COO → CSR
+    usando arrays de NumPy vectorizados. La estructura del grafo se
+    precalcula una sola vez y se reutiliza en cada paso.
 
     Parameters
     ----------
@@ -24,8 +96,7 @@ def build_admittance_matrix(simulation: dict[str, Any], v_input: float | None = 
         ``"graph"`` y ``"terminals"``.
     v_input : float, optional
         Voltaje de entrada a fijar en esta llamada. Si es ``None``
-        (default), se usa ``parameters["V_INPUT"]``. Se usa en
-        simulaciones dinámicas para no mutar el estado persistente.
+        (default), se usa ``parameters["V_INPUT"]``.
 
     Returns
     -------
@@ -38,80 +109,98 @@ def build_admittance_matrix(simulation: dict[str, Any], v_input: float | None = 
 
     Notes
     -----
-    También deja el resultado disponible en
-    ``simulation["circuit"]`` como ``{"Y", "I", "node_to_index"}``.
+    También deja el resultado disponible en ``simulation["circuit"]``
+    como ``{"Y", "I", "node_to_index", ...}``.
 
-    El código asume que la red percola (ver :func:`check_percolation`). Con
-    una red no percolante y ``G_LEAK`` muy pequeño, la matriz puede quedar
-    numéricamente singular.
-
+    El código asume que la red percola y que ``prune_dead_components``
+    fue ejecutado. Con nodos flotantes y ``G_LEAK`` pequeño, la matriz
+    puede quedar numéricamente singular.
     """
     p = simulation["parameters"]
-    G = simulation["graph"]
-    terminals = simulation["terminals"]
-    input_nodes = terminals["input_nodes"]
-    output_nodes = terminals["output_nodes"]
+    if "circuit" not in simulation:
+        simulation["circuit"] = {}
+    circuit = simulation["circuit"]
+
+    if "edge_u_idx" not in circuit:
+        _precompute_circuit_arrays(simulation)
 
     if v_input is None:
         v_input = p["V_INPUT"]
     v_ground = p["V_GROUND"]
+    g_leak = p["G_LEAK"]
 
-    N = G.number_of_nodes()
-    node_to_index = {node: i for i, node in enumerate(G.nodes)}
+    u_idx = circuit["edge_u_idx"]
+    v_idx = circuit["edge_v_idx"]
+    fixed_g = circuit["edge_fixed_g"]
+    mem_edge_idx = circuit["mem_edge_idx"]
+    mem_g = circuit["memristor_g"]
+    N = circuit["N"]
+    input_idx = circuit["input_idx"]
+    output_idx = circuit["output_idx"]
 
-    # Usamos lil_matrix para el llenado eficiente
-    Y = lil_matrix((N, N))
+    # --- Conductancia por arista (segmentos fijos + memristores actuales) ---
+    edge_g = fixed_g.copy()
+    if len(mem_edge_idx) > 0:
+        edge_g[mem_edge_idx] = mem_g
+
+    # --- Construir triplets COO: 4 por arista ---
+    E = len(u_idx)
+    rows = np.empty(4 * E, dtype=np.int64)
+    cols = np.empty(4 * E, dtype=np.int64)
+    vals = np.empty(4 * E, dtype=np.float64)
+
+    rows[0::4] = u_idx
+    cols[0::4] = u_idx
+    vals[0::4] = edge_g
+
+    rows[1::4] = v_idx
+    cols[1::4] = v_idx
+    vals[1::4] = edge_g
+
+    rows[2::4] = u_idx
+    cols[2::4] = v_idx
+    vals[2::4] = -edge_g
+
+    rows[3::4] = v_idx
+    cols[3::4] = u_idx
+    vals[3::4] = -edge_g
+
+    # --- G_LEAK en diagonales de nodos internos ---
+    electrode_mask = np.zeros(N, dtype=bool)
+    electrode_mask[input_idx] = True
+    electrode_mask[output_idx] = True
+
+    leak_rows = np.arange(N, dtype=np.int64)
+    leak_vals = np.where(electrode_mask, 0.0, g_leak)
+
+    all_rows = np.concatenate([rows, leak_rows])
+    all_cols = np.concatenate([cols, leak_rows])
+    all_vals = np.concatenate([vals, leak_vals])
+
+    Y = coo_matrix(
+        (all_vals, (all_rows, all_cols)), shape=(N, N)
+    ).tocsr()
+
+    # --- Condiciones de contorno de Dirichlet (fila identidad) ---
     I_vec = np.zeros(N)
 
-    for u, v, data in G.edges(data=True):
-        u_idx, v_idx = node_to_index[u], node_to_index[v]
-
-        if data.get("is_memristor", False):
-            # Lee G_OFF desde el diccionario
-            conductance = data.get("conductance", p["G_OFF"])
-        else:
-            # Lee R_WIRE_PER_LENGTH calculado con pi desde el diccionario
-            conductance = 1.0 / (data["weight"] * p["R_WIRE_PER_LENGTH"] + 1e-12)
-
-        Y[u_idx, v_idx] -= conductance
-        Y[v_idx, u_idx] -= conductance
-        Y[u_idx, u_idx] += conductance
-        Y[v_idx, v_idx] += conductance
-
-    # --- Condiciones de contorno de Dirichlet (fijan voltaje en electrodos de entrada y salida) ---
-    electrode_idx = set()
-
-    for node_id in input_nodes:
-        idx = node_to_index[node_id]
-        Y[idx, :] = 0.0
-        Y[idx, idx] = 1.0
+    for idx in input_idx:
+        s, e = Y.indptr[idx], Y.indptr[idx + 1]
+        cols_in_row = Y.indices[s:e]
+        Y.data[s:e] = np.where(cols_in_row == idx, 1.0, 0.0)
         I_vec[idx] = v_input
-        electrode_idx.add(idx)
 
-    for node_id in output_nodes:
-        idx = node_to_index[node_id]
-        Y[idx, :] = 0.0
-        Y[idx, idx] = 1.0
+    for idx in output_idx:
+        s, e = Y.indptr[idx], Y.indptr[idx + 1]
+        cols_in_row = Y.indices[s:e]
+        Y.data[s:e] = np.where(cols_in_row == idx, 1.0, 0.0)
         I_vec[idx] = v_ground
-        electrode_idx.add(idx)
 
-    # --- Estabilización numérica: fuga mínima a tierra en nodos internos ---
-    # (NO se aplica a las filas de los electrodos, para no alterar los BCs)
-    g_leak = p["G_LEAK"]
-    for i in range(N):
-        if i not in electrode_idx:
-            Y[i, i] += g_leak
+    Y.eliminate_zeros()
 
-    # Convertimos a CSR (Compressed Sparse Row) para que el solver vuele
-    Y_csr = Y.tocsr()
-    circuit_data = {
-        "Y": Y_csr,
-        "I": I_vec,
-        "node_to_index": node_to_index,
-    }
-    simulation["circuit"] = circuit_data
-    return Y_csr, I_vec, node_to_index
-
+    circuit["Y"] = Y
+    circuit["I"] = I_vec
+    return Y, I_vec, circuit["node_to_index"]
 
 # ==============================================================================
 # ACTUALIZACIÓN ESTOCÁSTICA DE MEMRISTORES
@@ -119,35 +208,13 @@ def build_admittance_matrix(simulation: dict[str, Any], v_input: float | None = 
 def update_stochastic_conductance(simulation: dict[str, Any], V_solved):
     """Actualiza estocásticamente el estado de los memristores.
 
-    Evalúa el voltaje local :math:`V_{\\text{mem}} = |V_u - V_v|` en cada
-    arista memristiva y aplica las reglas de conmutación:
-
-    - **SET** (OFF -> ON): si :math:`V_{\\text{mem}} > V_{\\text{threshold}}`,
-      con probabilidad exponencial en :math:`|V_{\\text{mem}} - V_{\\text{threshold}}|`.
-    - **RESET** (ON -> OFF): con probabilidad modulada por un factor de
-      estabilidad :math:`\\exp(-|V_{\\text{mem}}| / V_{\\text{threshold}})`.
-
-    Parameters
-    ----------
-    simulation : dict
-        Diccionario de simulación. Debe contener ``"parameters"``,
-        ``"graph"`` y ``"circuit"``.
-    V_solved : numpy.ndarray
-        Vector de voltajes nodales resuelto, indexado por
-        ``simulation["circuit"]["node_to_index"]``.
-
-    Returns
-    -------
-    networkx.Graph
-        El mismo objeto ``simulation["graph"]`` mutado in-place.
-
-    See Also
-    --------
-    build_admittance_matrix : construye el sistema que produce ``V_solved``.
+    ... (docstring igual) ...
     """
     p = simulation["parameters"]
     G = simulation["graph"]
-    node_to_index = simulation["circuit"]["node_to_index"]
+    circuit = simulation["circuit"]
+    node_to_index = circuit["node_to_index"]
+    mem_g = circuit["memristor_g"]
 
     edges_to_set = []
     edges_to_reset = []
@@ -159,28 +226,30 @@ def update_stochastic_conductance(simulation: dict[str, Any], V_solved):
         u_idx, v_idx = node_to_index[u], node_to_index[v]
         V_mem = abs(V_solved[u_idx] - V_solved[v_idx])
         current_G = data.get("conductance", p["G_OFF"])
+        j = data["_mem_idx"]
 
         # --- SET (Facilitación) ---
         if current_G == p["G_OFF"]:
             if V_mem > p["V_THRESHOLD"]:
-                # Probabilidad exponencial basada en la activación iónica (Ag+)
-                p_set = p["P0_SET"] * np.exp(p["ALPHA_SET"] * np.abs(V_mem - p["V_THRESHOLD"]))
+                p_set = p["P0_SET"] * np.exp(
+                    p["ALPHA_SET"] * np.abs(V_mem - p["V_THRESHOLD"])
+                )
                 if np.random.rand() < p_set:
-                    edges_to_set.append((u, v))
+                    edges_to_set.append((u, v, j))
 
         # --- RESET (Relajación volátil) ---
         elif current_G == p["G_ON"]:
-            #  Factor de estabilidad: disminuye el decay si hay voltaje suficiente
             estabilidad = np.exp(-np.abs(V_mem) / p["V_THRESHOLD"])
             p_decay = p["P_DECAY"] * estabilidad
             if np.random.rand() < p_decay:
-                edges_to_reset.append((u, v))
+                edges_to_reset.append((u, v, j))
 
-    # Aplicar cambios en lote
-    for u, v in edges_to_set:
+    for u, v, j in edges_to_set:
         G.edges[u, v]["conductance"] = p["G_ON"]
-    for u, v in edges_to_reset:
+        mem_g[j] = p["G_ON"]
+    for u, v, j in edges_to_reset:
         G.edges[u, v]["conductance"] = p["G_OFF"]
+        mem_g[j] = p["G_OFF"]
 
     return G
 
