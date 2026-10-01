@@ -7,13 +7,14 @@ from typing import Any
 
 from .fisica import build_admittance_matrix
 from .geometria import generate_and_find_junctions
-from .grafo import build_graph, find_electrode_nodes
+from .grafo import build_graph, find_electrode_nodes, prune_dead_components
 from .load_config import load_parameters
 
 
 def setup_simulation(
     filepath: str | None = None,
     parms: dict[str, Any] | None = None,
+    prune:bool=True,
 ) -> dict[str, Any]:
     """Construye el diccionario completo de simulación.
 
@@ -30,6 +31,10 @@ def setup_simulation(
         Overrides sobre los parámetros cargados. Las claves desconocidas
         disparan :class:`~neuromorphic.load_config.UnknownParameterWarning`
         y se ignoran.
+
+    prune: bool
+        Si es True, poda los sub-grafos desconectados del resto.
+        Default: ``True``.
 
     Returns
     -------
@@ -51,5 +56,7 @@ def setup_simulation(
     generate_and_find_junctions(simulation)
     build_graph(simulation)
     find_electrode_nodes(simulation)
+    if prune:
+        prune_dead_components(simulation)
     build_admittance_matrix(simulation)
     return simulation
