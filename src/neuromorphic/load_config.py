@@ -13,8 +13,6 @@ Unknown keys in ``parms`` trigger an ``UnknownParameterWarning`` and are
 ignored (they do not override anything).
 """
 
-from __future__ import annotations
-
 import configparser
 import warnings
 from importlib.resources import files
@@ -73,27 +71,49 @@ DERIVED_KEYS: frozenset[str] = frozenset(
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
+
+
 def cargar_parametros(
     filepath: str | Path | None = None,
     parms: dict[str, Any] | None = None,
 ) -> dict[str, dict[str, Any]]:
-    """Load simulation parameters.
+    """Carga los parámetros de simulación.
 
     Parameters
     ----------
-    filepath : str or Path, optional
-        Path to an explicit ``.ini`` file. If ``None`` (default), the
-        packaged ``defaults.ini`` is used. No silent CWD fallback.
+    filepath : str or pathlib.Path, optional
+        Ruta a un archivo ``.ini`` explícito. Si es ``None`` (default),
+        se usa el ``defaults.ini`` empaquetado con la librería. No hay
+        búsqueda implícita en el directorio actual.
     parms : dict, optional
-        Overrides applied on top of the loaded file. Unknown keys emit
-        ``UnknownParameterWarning`` and are ignored.
+        Overrides aplicados sobre los valores del archivo. Las claves
+        desconocidas disparan :class:`UnknownParameterWarning` y se
+        ignoran. Los valores derivados se recalculan automáticamente
+        después del merge.
 
     Returns
     -------
     dict
-        ``{"parameters": {...}}`` with raw and derived values.
-    """
+        Diccionario con la clave ``"parameters"`` que contiene tanto los
+        valores crudos del ``.ini`` como los derivados:
+        ``PROXIMITY_THRESHOLD``, ``R_WIRE_PER_LENGTH`` y ``TOTAL_TIME``.
 
+    Raises
+    ------
+    FileNotFoundError
+        Si ``filepath`` es explícito y no existe, o si el ``defaults.ini``
+        empaquetado no se encuentra.
+
+    Warns
+    -----
+    UnknownParameterWarning
+        Si ``parms`` contiene claves que no pertenecen a
+        :data:`KNOWN_RAW_KEYS`.
+
+    See Also
+    --------
+    setup_simulation : construye el dict completo de simulación.
+    """
     params = _load_defaults() if filepath is None else _load_ini(Path(filepath))
 
     if parms is not None:

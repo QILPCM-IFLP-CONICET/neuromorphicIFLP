@@ -15,22 +15,37 @@ def setup_simulation(
     filepath: str | None = None,
     parms: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Assemble a simulation dict from config + overrides.
+    """Construye el diccionario completo de simulación.
+
+    Encadena la carga de parámetros, la generación geométrica de la red,
+    la construcción del grafo, la detección de electrodos y el ensamblado
+    inicial de la matriz de admitancia.
 
     Parameters
     ----------
     filepath : str, optional
-        Path to an explicit ``.ini`` file. If ``None``, the packaged
-        defaults are used.
+        Ruta a un ``.ini`` explícito. Si es ``None``, se usa el
+        ``defaults.ini`` empaquetado.
     parms : dict, optional
-        Parameter overrides applied on top of the file. Unknown keys
-        emit an ``UnknownParameterWarning`` and are ignored.
+        Overrides sobre los parámetros cargados. Las claves desconocidas
+        disparan :class:`~neuromorphic.load_config.UnknownParameterWarning`
+        y se ignoran.
 
     Returns
     -------
     dict
-        Keys: ``parameters``, ``junctions``, ``graph``, ``terminals``,
-        ``circuit``.
+        Diccionario con las claves:
+
+        - ``"parameters"`` : parámetros crudos y derivados.
+        - ``"junctions"`` : estructuras geométricas de la red.
+        - ``"graph"`` : objeto :class:`networkx.Graph`.
+        - ``"terminals"`` : ``{"input_nodes", "output_nodes"}``.
+        - ``"circuit"`` : ``{"Y", "I", "node_to_index"}``.
+
+    See Also
+    --------
+    cargar_parametros : carga y valida los parámetros.
+    run_simulation_dynamic_pulse : corre el experimento de pulso.
     """
     simulation = cargar_parametros(filepath, parms=parms)
     generate_and_find_junctions(simulation)
