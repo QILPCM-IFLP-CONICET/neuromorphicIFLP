@@ -155,3 +155,7 @@ for Neuromorphic Computing*. 55º Jornadas Argentinas de
 ## Licencia
 
 MIT. Ver [LICENSE](LICENSE).
+
+[![Tests](https://github.com/QILPCM-IFLP-CONICET/neuromorphicNWLamas/actions/workflows/tests.yml/badge.svg)](...)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](...)
