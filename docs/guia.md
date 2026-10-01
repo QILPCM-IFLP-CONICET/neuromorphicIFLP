@@ -1,5 +1,7 @@
 # neuromorphicNWLamas
 
+(Deprecated-> ver arquitectura.md)
+
 # Simulador de Redes de Nanohilos Neuromórficas (Nanowire Networks - NWN)
 
 Este repositorio contiene una librería modular en Python para la generación estocástica, modelado topológico y simulación eléctrica/dinámica de redes de nanohilos de plata (Ag). El sistema simula el comportamiento de "memristores" estocásticos autoensamblados en los puntos de intersección de los filamentos, emulando la plasticidad sináptica y los procesos de memoria del cerebro humano.
