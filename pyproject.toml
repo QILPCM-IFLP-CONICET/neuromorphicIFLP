@@ -40,7 +40,10 @@ dev = [
     "pytest-cov>=4.0",
     "ruff>=0.5",
     "mypy>=1.0",
+    "types-networkx",
+    "scipy-stubs",
 ]
+
 
 [project.urls]
 Homepage = "https://github.com/QILPCM-IFLP-CONICET/neuromorphicNWLamas"

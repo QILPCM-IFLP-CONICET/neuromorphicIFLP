@@ -83,14 +83,14 @@ def build_admittance_matrix2(simulation: dict, v_input=None):
             Y[i, i] += G_LEAK
 
     # Convertimos a CSR (Compressed Sparse Row) para que el solver vuele
-    Y = Y.tocsr()
+    Y_csr = Y.tocsr()
     circuit_data = {
-        "Y": Y,
+        "Y": Y_csr,
         "I": I_vec,
         "node_to_index": node_to_index,
     }
     simulation["circuit"] = circuit_data
-    return Y, I_vec, node_to_index
+    return Y_csr, I_vec, node_to_index
 
 
 # ==============================================================================

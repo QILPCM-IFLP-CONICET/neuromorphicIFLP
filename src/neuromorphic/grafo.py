@@ -23,7 +23,7 @@ def build_graph2(simulation: dict):
     junctions = junction_data["junctions"]
     wire_to_junctions = junction_data["wire_to_junctions"]
 
-    G = nx.Graph()
+    graph: nx.Graph = nx.Graph()
     wire_junction_to_graph_node = {}
 
     # Crear dos nodos por unión y la arista memristiva entre ellos
@@ -37,10 +37,10 @@ def build_graph2(simulation: dict):
         wire_junction_to_graph_node[(orig_junction_id, w1_id)] = node_for_w1_side
         wire_junction_to_graph_node[(orig_junction_id, w2_id)] = node_for_w2_side
 
-        G.add_node(node_for_w1_side, pos=j_data["pos"])
-        G.add_node(node_for_w2_side, pos=j_data["pos"])
+        graph.add_node(node_for_w1_side, pos=j_data["pos"])
+        graph.add_node(node_for_w2_side, pos=j_data["pos"])
 
-        G.add_edge(node_for_w1_side, node_for_w2_side, is_memristor=True, conductance=p["G_OFF"])
+        graph.add_edge(node_for_w1_side, node_for_w2_side, is_memristor=True, conductance=p["G_OFF"])
 
     # Segmentos internos de cada nanohilo (resistencias lineales)
     for wire_id, junctions_list_for_wire in wire_to_junctions.items():
@@ -62,9 +62,9 @@ def build_graph2(simulation: dict):
             u_graph_node = wire_junction_to_graph_node[(u_orig_junction_data["id"], wire_id)]
             v_graph_node = wire_junction_to_graph_node[(v_orig_junction_data["id"], wire_id)]
 
-            G.add_edge(u_graph_node, v_graph_node, weight=dist_between)
+            graph.add_edge(u_graph_node, v_graph_node, weight=dist_between)
 
-    simulation["graph"] = G
+    simulation["graph"] = graph
     return
 
 

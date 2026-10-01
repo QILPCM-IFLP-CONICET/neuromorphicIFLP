@@ -1,11 +1,12 @@
 # geometria.py
+from typing import Any
 import numpy as np
 
 
 # ==============================================================================
 # FUNCIONES DE GEOMETRÍA Y RED
 # ==============================================================================
-def generate_and_find_junctions(simulation: dict):
+def generate_and_find_junctions(simulation: dict[str, Any]):
     """
     La función se encarga de simular la disposición de nanohilos
     en un área cuadrada y encontrar todos los puntos donde estos
@@ -43,10 +44,10 @@ def generate_and_find_junctions(simulation: dict):
         Esto es útil para navegar por las uniones a lo largo de un nanohilo específico.
     """
     # Extraemos las variables del diccionario centralizado
-    p = simulation["parameters"]
-    num_wires = p["NUM_WIRES"]
-    wire_length = p["LENGTH"]
-    area_size = p["AREA"]
+    p :dict[str, Any] = simulation["parameters"]
+    num_wires: int = p["NUM_WIRES"]
+    wire_length: float = p["LENGTH"]
+    area_size: float = p["AREA"]
 
     # Generación de posiciones aleatorias basándonos en el substrato
     xc = np.random.uniform(0, area_size, num_wires)
@@ -56,7 +57,7 @@ def generate_and_find_junctions(simulation: dict):
     x_off = (wire_length / 2) * np.cos(theta)
     y_off = (wire_length / 2) * np.sin(theta)
 
-    wires = []
+    wires:list[dict[str,Any]] = []
     for i in range(num_wires):
         wires.append(
             {
@@ -66,7 +67,8 @@ def generate_and_find_junctions(simulation: dict):
             }
         )
 
-    junctions, wire_to_junctions = [], {i: [] for i in range(num_wires)}
+    junctions: list[dict[str, Any]] = []
+    wire_to_junctions:dict[int,list[dict[str, Any]]] = {i: [] for i in range(num_wires)}
     junction_id_counter = 0
 
     # Detección de intersecciones por fuerza bruta
