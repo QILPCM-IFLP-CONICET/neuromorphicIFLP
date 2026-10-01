@@ -5,10 +5,10 @@ from __future__ import annotations
 
 from typing import Any
 
-from .fisica import build_admittance_matrix2
+from .fisica import build_admittance_matrix
 from .geometria import generate_and_find_junctions
-from .grafo import build_graph2, find_electrode_nodes2
-from .load_config import cargar_parametros
+from .grafo import build_graph, find_electrode_nodes
+from .load_config import load_parameters
 
 
 def setup_simulation(
@@ -44,12 +44,12 @@ def setup_simulation(
 
     See Also
     --------
-    cargar_parametros : carga y valida los parámetros.
+    load_parameters : carga y valida los parámetros.
     run_simulation_dynamic_pulse : corre el experimento de pulso.
     """
-    simulation = cargar_parametros(filepath, parms=parms)
+    simulation = load_parameters(filepath, parms=parms)
     generate_and_find_junctions(simulation)
-    build_graph2(simulation)
-    find_electrode_nodes2(simulation)
-    build_admittance_matrix2(simulation)
+    build_graph(simulation)
+    find_electrode_nodes(simulation)
+    build_admittance_matrix(simulation)
     return simulation

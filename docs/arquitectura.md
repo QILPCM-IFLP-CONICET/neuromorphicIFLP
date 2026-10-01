@@ -42,7 +42,7 @@ simulation = {
 Cada función recibe `simulation` y lee lo que necesita de ahí. No hay
 variables globales ni parámetros leídos implícitamente del directorio
 de trabajo. Los overrides se hacen vía `parms=` en `setup_simulation` o
-`cargar_parametros`.
+`load_parameters`.
 
 ## Uso en Google Colab
 

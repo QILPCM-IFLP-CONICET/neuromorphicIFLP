@@ -8,7 +8,7 @@ from scipy.sparse import lil_matrix
 # ==============================================================================
 # CONSTRUCCIÓN DE LA MATRIZ DE ADMITANCIA (SPARSE)
 # ==============================================================================
-def build_admittance_matrix2(simulation: dict[str, Any], v_input: float | None = None):
+def build_admittance_matrix(simulation: dict[str, Any], v_input: float | None = None):
     """Ensambla la matriz de admitancia y el vector de corrientes.
 
     Construye el sistema :math:`Y \\cdot V = I` aplicando las leyes de
@@ -40,6 +40,11 @@ def build_admittance_matrix2(simulation: dict[str, Any], v_input: float | None =
     -----
     También deja el resultado disponible en
     ``simulation["circuit"]`` como ``{"Y", "I", "node_to_index"}``.
+
+    El código asume que la red percola (ver :func:`check_percolation`). Con
+    una red no percolante y ``G_LEAK`` muy pequeño, la matriz puede quedar
+    numéricamente singular.
+
     """
     p = simulation["parameters"]
     G = simulation["graph"]
@@ -92,10 +97,10 @@ def build_admittance_matrix2(simulation: dict[str, Any], v_input: float | None =
 
     # --- Estabilización numérica: fuga mínima a tierra en nodos internos ---
     # (NO se aplica a las filas de los electrodos, para no alterar los BCs)
-    G_LEAK = 1e-12
+    g_leak = p["G_LEAK"]
     for i in range(N):
         if i not in electrode_idx:
-            Y[i, i] += G_LEAK
+            Y[i, i] += g_leak
 
     # Convertimos a CSR (Compressed Sparse Row) para que el solver vuele
     Y_csr = Y.tocsr()
@@ -111,7 +116,7 @@ def build_admittance_matrix2(simulation: dict[str, Any], v_input: float | None =
 # ==============================================================================
 # ACTUALIZACIÓN ESTOCÁSTICA DE MEMRISTORES
 # ==============================================================================
-def update_stochastic_conductance2(simulation: dict[str, Any], V_solved):
+def update_stochastic_conductance(simulation: dict[str, Any], V_solved):
     """Actualiza estocásticamente el estado de los memristores.
 
     Evalúa el voltaje local :math:`V_{\\text{mem}} = |V_u - V_v|` en cada

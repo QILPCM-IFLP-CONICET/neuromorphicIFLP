@@ -9,7 +9,7 @@ import numpy as np
 # ==============================================================================
 # CONSTRUCCIÓN DEL GRAFO
 # ==============================================================================
-def build_graph2(simulation: dict[str, Any]) -> None:
+def build_graph(simulation: dict[str, Any]) -> None:
     """Construye el grafo topológico de la red con duplicación de nodos.
 
     Por cada juntura física se crean dos nodos en el grafo (uno por cada
@@ -90,7 +90,7 @@ def build_graph2(simulation: dict[str, Any]) -> None:
 # ==============================================================================
 # DETECCIÓN DE ELECTRODOS
 # ==============================================================================
-def find_electrode_nodes2(simulation: dict[str, Any]) -> None:
+def find_electrode_nodes(simulation: dict[str, Any]) -> None:
     """Identifica los nodos del grafo que actúan como electrodos.
 
     Un nodo es electrodo de entrada si su coordenada ``x`` es menor que

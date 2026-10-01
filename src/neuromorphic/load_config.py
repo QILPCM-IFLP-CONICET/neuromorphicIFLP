@@ -5,7 +5,7 @@ Design
 ------
 - ``_load_defaults()`` reads the ``.ini`` bundled with the package.
 - ``_load_ini(path)`` reads an explicit user-provided ``.ini``.
-- ``cargar_parametros(filepath=None, parms=None)`` is the single public
+- ``load_parameters(filepath=None, parms=None)`` is the single public
   entry point. It never searches the current working directory
   implicitly: if ``filepath`` is None, only the package defaults are used.
 
@@ -73,7 +73,7 @@ DERIVED_KEYS: frozenset[str] = frozenset(
 # ---------------------------------------------------------------------------
 
 
-def cargar_parametros(
+def load_parameters(
     filepath: str | Path | None = None,
     parms: dict[str, Any] | None = None,
 ) -> dict[str, dict[str, Any]]:
@@ -167,6 +167,7 @@ def _parse_ini(fh) -> dict[str, Any]:
     params["PROXIMITY_THRESHOLD_RATIO"] = config.getfloat("Network", "proximity_threshold_ratio")
 
     # Electrical
+    params["G_LEAK"] = config.getfloat("Electrical", "g_leak")
     params["V_INPUT"] = config.getfloat("Electrical", "v_input")
     params["V_GROUND"] = config.getfloat("Electrical", "v_ground")
     params["V_READ"] = config.getfloat("Electrical", "v_read")
