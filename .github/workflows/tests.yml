@@ -36,7 +36,6 @@ jobs:
 
       - name: Type check with mypy
         run: mypy src
-        continue-on-error: true   # permitir fallos mientras se tipa el código
 
       - name: Run tests
         run: pytest -v --cov=neuromorphic --cov-report=xml
