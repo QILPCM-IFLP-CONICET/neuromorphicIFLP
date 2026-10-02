@@ -61,6 +61,17 @@ ignoran. Los valores derivados (`PROXIMITY_THRESHOLD`,
 `R_WIRE_PER_LENGTH`, `TOTAL_TIME`) se recalculan automáticamente después
 del merge.
 
+### Reproducibilidad
+
+`setup_simulation` siembra el generador global de NumPy con `RNG_SEED`
+(clave `seed` de la sección `[Probabilities]` del `.ini`, 42 por
+defecto) antes de generar la geometría. Para obtener otra realización de
+la red basta con cambiar la semilla:
+
+```python
+sim = setup_simulation(parms={"RNG_SEED": 7})
+```
+
 ### Configuración con archivo propio
 
 ```python
@@ -109,7 +120,7 @@ temporal. Por defecto se usa `stochastic1`.
 Es posible registrar implementaciones propias sin tocar el paquete:
 
 ```python
-from neuromorphic.fisica.evolvers import register_memristor_evol_model
+from neuromorphic.fisica import register_memristor_evol_model
 
 @register_memristor_evol_model("mi_modelo")
 def mi_modelo(simulation, V_solved):
@@ -131,14 +142,22 @@ Detalles del contrato, manejo del RNG y modelos incluidos en
 
 ```text
 src/neuromorphic/
-├── defaults.ini       # Parámetros por defecto (empaquetados)
-├── load_config.py     # Carga y validación de parámetros
-├── geometria.py       # Generación espacial de hilos y junturas
-├── grafo.py           # Topología (networkx) y electrodos
-├── fisica.py          # Matriz de admitancia y dinámica estocástica
-├── simulador.py       # Motor temporal (pulso, relajación)
-├── visualizacion.py   # Gráficas científicas
-└── simulation.py      # Entry point: setup_simulation()
+├── defaults.ini         # Parámetros por defecto (empaquetados)
+├── load_config.py       # Carga y validación de parámetros
+├── geometria.py         # Generación espacial de hilos y junturas
+├── grafo.py             # Topología (networkx), electrodos, percolación
+├── fisica/
+│   ├── admitancia.py    # Matriz de admitancia dispersa Y
+│   ├── corrientes.py    # Corrientes en los electrodos
+│   ├── pulsos.py        # Formas de onda de excitación
+│   └── evolvers/        # Registro de modelos de evolución de memristores
+├── dinamica.py          # Motor temporal (pulso, relajación)
+├── visualizacion.py     # Gráficas científicas
+└── simulation.py        # Entry point: setup_simulation()
+
+docs/                    # Arquitectura, evolvers y guía histórica
+scripts/benchmarks.py    # Benchmarks de setup y hot loop
+tests/                   # Suite de pytest
 ```
 
 La API pública se expone desde el paquete:
@@ -148,7 +167,19 @@ from neuromorphic import (
     setup_simulation,
     run_simulation_dynamic_pulse,
     plot_simulation_results,
-    update_stochastic_conductance,
+    EVOLVE_MODELS,
+)
+```
+
+Las piezas de bajo nivel (matriz de admitancia, corrientes, registro de
+evolvers) están en `neuromorphic.fisica`:
+
+```python
+from neuromorphic.fisica import (
+    build_admittance_matrix,
+    calculate_input_current,
+    calculate_output_current,
+    register_memristor_evol_model,
 )
 ```
 
@@ -160,7 +191,7 @@ from neuromorphic import (
 pytest
 ```
 
-La suite corre en aproximadamente 10 segundos e incluye tests unitarios
+La suite corre en pocos segundos e incluye tests unitarios
 por módulo e integración end-to-end con redes por encima y por debajo
 del umbral de percolación.
 

@@ -69,17 +69,20 @@ También están disponibles:
 El valor de retorno se ignora; se recomienda devolver el grafo por
 convención.
 
-> **RNG**: si el evolver consume `numpy.random`, altera el estado global
-> del generador. Dos evolvers distintos con la misma semilla no producirán
-> necesariamente las mismas conmutaciones; la distribución estadística del
-> proceso sí es la misma. Si necesitás reproducibilidad estricta, pasá tu
-> propio `np.random.Generator` a través de `simulation["parameters"]`.
+> **RNG**: `setup_simulation` siembra el generador global con
+> `np.random.seed(RNG_SEED)`, y el evolver incluido (`stochastic1`)
+> consume `numpy.random` directamente. Con la misma semilla y el mismo
+> evolver la corrida es reproducible. Dos evolvers distintos con la misma
+> semilla no producirán necesariamente las mismas conmutaciones, porque
+> consumen el generador en distinto orden. Por ahora el paquete no admite
+> inyectar un `np.random.Generator` propio; si tu evolver lo necesita,
+> podés guardarlo en `simulation` vos mismo y leerlo desde la función.
 
 ## Registrar un modelo propio
 
 ~~~python
 import numpy as np
-from neuromorphic.fisica.evolvers import register_memristor_evol_model
+from neuromorphic.fisica import register_memristor_evol_model
 
 
 @register_memristor_evol_model("siempre_on")
@@ -111,7 +114,8 @@ t, G_total, activos = run_simulation_dynamic_pulse(sim)
 
 El registro es **global al proceso**: importá el módulo del evolver una
 sola vez (por ejemplo en tu `__init__.py` o al inicio del notebook) antes
-de llamar a `setup_simulation`.
+de llamar a `run_simulation_dynamic_pulse`. Registrar un nombre que ya
+existe reemplaza la función anterior sin emitir advertencia.
 
 ## Modelos incluidos
 

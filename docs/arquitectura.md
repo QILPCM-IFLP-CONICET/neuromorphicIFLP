@@ -43,8 +43,10 @@ simulation = {
 ~~~
 
 Cada función recibe `simulation` y lee lo que necesita de ahí. No hay
-variables globales ni parámetros leídos implícitamente del directorio
-de trabajo. Los overrides se hacen vía `parms=` en `setup_simulation` o
+parámetros globales ni leídos implícitamente del directorio de trabajo.
+La única excepción de estado global es el generador de números
+aleatorios: `setup_simulation` llama a `np.random.seed(RNG_SEED)` y
+tanto la geometría como los evolvers consumen `numpy.random`. Los overrides se hacen vía `parms=` en `setup_simulation` o
 `load_parameters`.
 
 ## Uso en Google Colab
@@ -88,8 +90,9 @@ display(btn, out)
 ~~~
 
 Con el paquete instalable, **no hace falta clonar ni manipular
-`sys.path`**: `pip install` trae el paquete, el `defaults.ini` y los
-tests. Los overrides van todos por `parms=`.
+`sys.path`**: `pip install` trae el paquete y el `defaults.ini`. Los
+tests, la documentación y los benchmarks no se instalan; para eso hay
+que clonar el repositorio. Los overrides van todos por `parms=`.
 
 ## Registro de evolvers
 
@@ -107,6 +110,11 @@ def register_memristor_evol_model(name: str):
         return fn
     return _register
 ~~~
+
+El decorador está reexportado en `neuromorphic.fisica`, de modo que
+`from neuromorphic.fisica import register_memristor_evol_model` es la
+forma recomendada de importarlo. Registrar un nombre ya existente lo
+sobrescribe sin aviso.
 
 El motor temporal resuelve `p["EVOLVER"]` contra ese diccionario en cada
 corrida. La clave se lee del `.ini` como `evolver_model` en la sección
