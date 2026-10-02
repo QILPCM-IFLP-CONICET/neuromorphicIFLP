@@ -10,13 +10,16 @@
                        │
         ┌──────────────┼──────────────┬──────────────┐
         ▼              ▼              ▼              ▼
-   geometria.py    grafo.py       fisica.py   visualizacion.py
-   (hilos y        (topología,    (Y, I,      (gráficas)
-    junturas)       electrodos)    dinámica)
+   geometria.py    grafo.py       fisica/      visualizacion.py
+   (hilos y        (topología,    ├── admitancia.py   (gráficas)
+    junturas)       electrodos)   ├── corrientes.py
+                                   └── evolvers/
+                                       └── EVOLVE_MODELS
+                                           ◄── register_memristor_evol_model
         │              │              │              │
         └──────────────┴──────────────┘              │
                        ▼                             │
-                 simulador.py  ◄─────────────────────┘
+                 dinamica.py  ◄──────────────────────┘
                  (motor temporal)
                        │
                        ▼
@@ -87,3 +90,27 @@ display(btn, out)
 Con el paquete instalable, **no hace falta clonar ni manipular
 `sys.path`**: `pip install` trae el paquete, el `defaults.ini` y los
 tests. Los overrides van todos por `parms=`.
+
+## Registro de evolvers
+
+`fisica/evolvers/base.py` mantiene un diccionario global
+`EVOLVE_MODELS: dict[str, Callable]`. Cada modelo se registra al momento
+de importar su módulo mediante el decorador
+`register_memristor_evol_model("nombre")`:
+
+~~~python
+EVOLVE_MODELS = {}
+
+def register_memristor_evol_model(name: str):
+    def _register(fn):
+        EVOLVE_MODELS[name] = fn
+        return fn
+    return _register
+~~~
+
+El motor temporal resuelve `p["EVOLVER"]` contra ese diccionario en cada
+corrida. La clave se lee del `.ini` como `evolver_model` en la sección
+`[Memristor]`, y puede sobrescribirse con `parms={"EVOLVER": "..."}`.
+
+Ver [`evolvers.md`](evolvers.md) para el contrato completo, la lista de
+modelos incluidos y ejemplos de implementaciones propias.

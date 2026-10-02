@@ -100,9 +100,36 @@ topológico entre electrodos y la simulación se rechaza con
 
 ---
 
+## Modelos de evolución
+
+El parámetro `evolver_model` del `.ini` (o `EVOLVER` en `parms=`) elige
+la función que actualiza el estado de los memristores en cada paso
+temporal. Por defecto se usa `stochastic1`.
+
+Es posible registrar implementaciones propias sin tocar el paquete:
+
+```python
+from neuromorphic.fisica.evolvers import register_memristor_evol_model
+
+@register_memristor_evol_model("mi_modelo")
+def mi_modelo(simulation, V_solved):
+    # mutar simulation["circuit"]["memristor_g"]
+    # y simulation["graph"].edges[u, v]["conductance"]
+    return simulation["graph"]
+```
+
+```python
+sim = setup_simulation(parms={"EVOLVER": "mi_modelo"})
+```
+
+Detalles del contrato, manejo del RNG y modelos incluidos en
+[`docs/evolvers.md`](docs/evolvers.md).
+
+---
+
 ## Estructura del paquete
 
-```
+```text
 src/neuromorphic/
 ├── defaults.ini       # Parámetros por defecto (empaquetados)
 ├── load_config.py     # Carga y validación de parámetros
@@ -139,8 +166,6 @@ del umbral de percolación.
 
 ---
 
-
-
 ## Benchmarks
 
 Para medir el rendimiento del setup y del hot loop:
@@ -153,17 +178,16 @@ Los valores por defecto (N=1500, seed=42) tardan menos de dos segundos
 en total. Ajustá con `--n-wires`, `--steps` y `--repeat` según lo que
 necesites.
 
+---
 
 ## Referencia
 
 Este código implementa el modelo descrito en:
 
 > Lamas et al. (2026). *Stochastic Modeling of Silver Nanowire Networks
-for Neuromorphic Computing*. 55º Jornadas Argentinas de
+> for Neuromorphic Computing*. 55º Jornadas Argentinas de
 > Informática (JAIiO).
 > https://55jaiio.sadio.org.ar/wp-content/uploads/2026/07/151.pdf
-
-
 
 ---
 

@@ -51,11 +51,13 @@ KNOWN_RAW_KEYS: frozenset[str] = frozenset(
         "G_ON",
         "G_OFF",
         "V_THRESHOLD",
+        "EVOLVER",
         # Probabilities
         "P0_SET",
         "ALPHA_SET",
         "P_DECAY",
         "BETA_RESET",
+        "RNG_SEED",
     }
 )
 
