@@ -2,6 +2,8 @@
 Base module for defining and register memristor evolution models.
 """
 
+# Importar los módulos registra los modelos (numba se carga recién al usarlo)
+from . import ladder, ladder_numba, thermal  # noqa: F401
 from .base import (
     EVOLVE_MODELS,
     EVOLVER_SPECS,

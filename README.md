@@ -18,6 +18,12 @@ cd neuromorphicNWLamas
 pip install -e .
 ```
 
+Para usar el modelo de evolución `ladder_numba`:
+
+```bash
+pip install -e ".[numba]"
+```
+
 Para desarrollo (tests, lint, type-check):
 
 ```bash

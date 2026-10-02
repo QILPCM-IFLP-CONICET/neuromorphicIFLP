@@ -197,10 +197,83 @@ existe reemplaza la función anterior sin emitir advertencia.
 | `stochastic1` | SET por sobretensión con P = P0·exp[α(V−V_th)] y RESET con P = P_decay·exp(−V/V_th). Las probabilidades son por paso y no escalan con `TIME_STEP_DT`. Modelo por defecto. |
 | `stochastic2` | Modelo de Lamas et al. (2026): P_set = Δt·P0·max(0, 1 − exp[−α(V−V_th)]) y P_reset = min(1, Δt·P_decay·I²), con I = G_ON·V. `P0_SET` está en s⁻¹ y `P_DECAY` en A⁻²·s⁻¹. |
 
+| `ladder` | Junturas Ag/PVP/Ag como proceso de nacimiento-muerte sobre una escalera discreta de conductancias (niveles túnel y metálicos `n·G0`). Crecimiento por campo, disolución asistida por Joule y ruptura por potencia. Estocástico, con generador propio sembrado con `RNG_SEED`. |
+| `ladder_numba` | El mismo proceso con un kernel Numba. Requiere el extra `numba`. |
+| `thermal` | Junturas Ag/PVP/Ag con variable de estado continua `lam` (0: gap abierto, 1: filamento cerrado, >1: filamento que se engrosa). Crecimiento Mott-Gurney, disolución térmica y ruptura por temperatura Joule. Determinista. |
+
 > Los valores de `defaults.ini` están calibrados para `stochastic1`. Con
 > `stochastic2` las mismas cifras tienen otras unidades: por ejemplo,
 > con `G_ON = 1e-3` S y caídas de ~1 V, `P_DECAY = 0.8` da una
 > probabilidad de RESET del orden de 10⁻⁹ por paso.
+
+## Modelos de junturas Ag/PVP/Ag
+
+`ladder`, `ladder_numba` y `thermal` describen la juntura con conductancias
+físicas: arrancan en el nivel túnel más bajo, `G0·exp(-2·KAPPA·GAP_D)`
+(≈ 3.5 nS con los valores por defecto), y llegan hasta `N_MAX·G0`
+(≈ 0.77 mS). No usan `G_ON`, `G_OFF` ni `V_THRESHOLD`. Una juntura se
+considera activa (`memristor_active`) cuando el filamento cierra el gap,
+es decir `G >= G0`. En todos, la corriente por la juntura es
+`I = G·V` con la conductancia del paso actual.
+
+### Parámetros compartidos
+
+Escalares en todos los modelos de este grupo:
+
+| Clave | Default | Descripción |
+|---|---|---|
+| `GAP_D` | 1e-9 m | Espesor efectivo de PVP en la juntura. |
+| `HOP_A` | 2.5e-10 m | Distancia de salto iónico. |
+| `KAPPA` | 5e9 1/m | Decaimiento túnel. |
+| `N_MAX` | 10 | Conductancia máxima en unidades de `G0`. |
+
+### `ladder` y `ladder_numba`
+
+El estado es el nivel `k` de la escalera, que se recupera de `G`: no hay
+variables internas por juntura. `evolver_state` guarda la escalera
+(`ladder`, `gfac`, `edges`) y el generador (`rng` en `ladder`). Las tasas
+pueden ser arrays con un valor por juntura.
+
+| Clave | Default | Descripción |
+|---|---|---|
+| `LADDER_NU_UP`, `LADDER_V_S` | 1e3 1/s, 0.2 V | Crecimiento: `r_up = NU_UP·sinh(|V| / (V_S·gap_k/d))`. |
+| `LADDER_NU_DN`, `LADDER_BETA`, `LADDER_P_T` | 1 1/s, 0.7, 1e-5 W | Disolución: `r_dn = NU_DN·exp(-BETA·k)·exp(P/P_T)`. |
+| `LADDER_NU_RP`, `LADDER_P_C`, `LADDER_M` | 1e3 1/s, 6e-5 W, 6 | Ruptura a `k = 0`: `r_rp = NU_RP·(P/P_C)^M`. |
+| `LADDER_MAX_JUMPS` | 2 | Máximo de saltos por paso (escalar). |
+
+`ladder_numba` lee las tasas al inicializar, así que cambiarlas a mitad
+de corrida no tiene efecto. Trunca en `LADDER_MAX_JUMPS` el total de
+eventos, mientras que `ladder` trunca subidas y bajadas por separado;
+ambos coinciden cuando `r·dt` es chico. El kernel es secuencial para que
+la corrida sea reproducible con la semilla. En redes del tamaño habitual
+el paso está dominado por la resolución del circuito, así que la versión
+Numba no acelera la simulación completa; sirve como referencia para
+ensambles grandes de junturas.
+
+### `thermal`
+
+`evolver_state` guarda `lam` y los diagnósticos del último paso: la
+temperatura `T` y las máscaras `saturated` y `ruptured`. Todos los
+parámetros pueden ser arrays por juntura.
+
+| Clave | Default | Descripción |
+|---|---|---|
+| `THERMAL_NU`, `THERMAL_EA` | 1e13 1/s, 0.6 eV | Migración iónica (Mott-Gurney). |
+| `THERMAL_ED`, `THERMAL_TAU0`, `THERMAL_BETA` | 0.4 eV, 1e-6 s, 3 | Disolución: `tau = TAU0·exp(ED/kT)·exp(BETA·lam)`. |
+| `THERMAL_LAM_MAX` | 3 | Máximo engrosamiento del filamento. |
+| `THERMAL_RTH`, `THERMAL_T0`, `THERMAL_T_RUPT` | 1e7 K/W, 300 K, 900 K | Temperatura Joule `T = T0 + RTH·G·V²` y umbral de ruptura. |
+| `THERMAL_DLAM_MAX` | 0.05 | Máximo cambio de `lam` por paso. |
+
+Si en algún paso una juntura recorta su crecimiento a `THERMAL_DLAM_MAX`,
+el modelo emite `StepSaturationWarning` una vez por corrida, con la
+cantidad de junturas afectadas. Si son muchas, conviene reducir
+`TIME_STEP_DT`. Con los parámetros por defecto y `V_INPUT = 3.6` V,
+unas pocas junturas con caídas de tensión grandes saturan incluso con
+`dt = 1e-5` s, porque el crecimiento es exponencial en el campo. En esas
+junturas el recorte actúa como una tasa máxima efectiva.
+
+> Los valores por defecto de estos tres modelos son órdenes de magnitud
+> ilustrativos, no ajustados a mediciones.
 
 ## Ver también
 
