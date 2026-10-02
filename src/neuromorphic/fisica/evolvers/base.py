@@ -9,6 +9,7 @@ EVOLVE_MODELS = {}
 def register_memristor_evol_model(name: str):
     def _register(fn):
         EVOLVE_MODELS[name] = fn
+        return fn
 
     return _register
 
@@ -17,7 +18,7 @@ def register_memristor_evol_model(name: str):
 # ACTUALIZACIÓN ESTOCÁSTICA DE MEMRISTORES
 # ==============================================================================
 @register_memristor_evol_model("stochastic1")
-def register_memristor_evol_model(simulation: dict[str, Any], V_solved):
+def stochastic_updater1(simulation: dict[str, Any], V_solved):
     """Actualiza estocásticamente el estado de los memristores.
 
     Vectorizado con NumPy sobre los arrays precalculados en
