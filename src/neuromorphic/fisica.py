@@ -45,7 +45,7 @@ def _precompute_circuit_arrays(simulation: dict[str, Any]) -> None:
         is_mem[i] = mem
         if mem:
             fixed_g[i] = 0.0
-            data["_mem_idx"] = mem_count   # índice del memristor en memristor_g
+            data["_mem_idx"] = mem_count  # índice del memristor en memristor_g
             mem_count += 1
         else:
             fixed_g[i] = 1.0 / (data["weight"] * p["R_WIRE_PER_LENGTH"] + 1e-12)
@@ -74,7 +74,7 @@ def _precompute_circuit_arrays(simulation: dict[str, Any]) -> None:
     circuit["memristor_g"] = mem_g
     circuit["mem_u_idx"] = u_idx[mem_edge_idx]
     circuit["mem_v_idx"] = v_idx[mem_edge_idx]
-    circuit["mem_edge_keys"] = [edges[i][:2] for i in mem_edge_idx]    
+    circuit["mem_edge_keys"] = [edges[i][:2] for i in mem_edge_idx]
     circuit["input_idx"] = input_idx
     circuit["output_idx"] = output_idx
 
@@ -180,9 +180,7 @@ def build_admittance_matrix(
     all_cols = np.concatenate([cols, leak_rows])
     all_vals = np.concatenate([vals, leak_vals])
 
-    Y = coo_matrix(
-        (all_vals, (all_rows, all_cols)), shape=(N, N)
-    ).tocsr()
+    Y = coo_matrix((all_vals, (all_rows, all_cols)), shape=(N, N)).tocsr()
 
     # --- Condiciones de contorno de Dirichlet (fila identidad) ---
     I_vec = np.zeros(N)
@@ -204,6 +202,7 @@ def build_admittance_matrix(
     circuit["Y"] = Y
     circuit["I"] = I_vec
     return Y, I_vec, circuit["node_to_index"]
+
 
 # ==============================================================================
 # ACTUALIZACIÓN ESTOCÁSTICA DE MEMRISTORES
@@ -290,6 +289,7 @@ def update_stochastic_conductance(simulation: dict[str, Any], V_solved):
             G.edges[u, v]["conductance"] = G_OFF
 
     return G
+
 
 # ==============================================================================
 # CÁLCULOS DE CORRIENTES

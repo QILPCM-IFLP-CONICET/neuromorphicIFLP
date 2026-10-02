@@ -52,10 +52,7 @@ def generate_and_find_junctions(simulation: dict[str, Any]) -> None:
     p2_arr = np.stack([xc + x_off, yc + y_off], axis=1)
     d_arr = p2_arr - p1_arr
 
-    wires = [
-        {"id": i, "p1": p1_arr[i].copy(), "p2": p2_arr[i].copy()}
-        for i in range(num_wires)
-    ]
+    wires = [{"id": i, "p1": p1_arr[i].copy(), "p2": p2_arr[i].copy()} for i in range(num_wires)]
 
     # --- Detección vectorizada de intersecciones ---
     p1_x, p1_y = p1_arr[:, 0], p1_arr[:, 1]
@@ -74,11 +71,7 @@ def generate_and_find_junctions(simulation: dict[str, Any]) -> None:
         t = t_num / denom
         u = u_num / denom
 
-    valid = (
-        (denom != 0.0)
-        & (t >= 0.0) & (t <= 1.0)
-        & (u >= 0.0) & (u <= 1.0)
-    )
+    valid = (denom != 0.0) & (t >= 0.0) & (t <= 1.0) & (u >= 0.0) & (u <= 1.0)
     # Quedarnos solo con i < j.
     valid = np.triu(valid, k=1)
 
@@ -92,9 +85,7 @@ def generate_and_find_junctions(simulation: dict[str, Any]) -> None:
     iy = p1_y[i_idx] + t[i_idx, j_idx] * d_y[i_idx]
 
     junctions: list[dict[str, Any]] = []
-    wire_to_junctions: dict[int, list[dict[str, Any]]] = {
-        i: [] for i in range(num_wires)
-    }
+    wire_to_junctions: dict[int, list[dict[str, Any]]] = {i: [] for i in range(num_wires)}
 
     for k in range(n_junctions):
         i = int(i_idx[k])

@@ -7,6 +7,7 @@ Usage
     python scripts/bench.py --n-wires 2000 --steps 5000
     python scripts/bench.py --seed 7 --repeat 20
 """
+
 from __future__ import annotations
 
 import argparse
@@ -39,14 +40,19 @@ def format_row(label: str, seconds: float, width: int = 38) -> str:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--n-wires", type=int, default=1500,
-                        help="Number of nanowires (default: 1500)")
-    parser.add_argument("--steps", type=int, default=5000,
-                        help="Target steps for the total estimate (default: 5000)")
-    parser.add_argument("--repeat", type=int, default=10,
-                        help="Repetitions per per-step measurement (default: 10)")
-    parser.add_argument("--seed", type=int, default=42,
-                        help="Random seed (default: 42)")
+    parser.add_argument(
+        "--n-wires", type=int, default=1500, help="Number of nanowires (default: 1500)"
+    )
+    parser.add_argument(
+        "--steps",
+        type=int,
+        default=5000,
+        help="Target steps for the total estimate (default: 5000)",
+    )
+    parser.add_argument(
+        "--repeat", type=int, default=10, help="Repetitions per per-step measurement (default: 10)"
+    )
+    parser.add_argument("--seed", type=int, default=42, help="Random seed (default: 42)")
     args = parser.parse_args()
 
     np.random.seed(args.seed)
@@ -66,10 +72,7 @@ def main() -> None:
 
     n_nodes = sim["graph"].number_of_nodes()
     n_edges = sim["graph"].number_of_edges()
-    n_mem = sum(
-        1 for _, _, d in sim["graph"].edges(data=True)
-        if d.get("is_memristor", False)
-    )
+    n_mem = sum(1 for _, _, d in sim["graph"].edges(data=True) if d.get("is_memristor", False))
 
     print()
     print(f"Network: {n_nodes} nodes, {n_edges} edges, {n_mem} memristors")
@@ -86,12 +89,8 @@ def main() -> None:
 
     t_build, _ = timeit(lambda: build_admittance_matrix(sim), repeat=args.repeat)
     t_solve, _ = timeit(lambda: spsolve(Y, I_vec), repeat=args.repeat)
-    t_update, _ = timeit(
-        lambda: update_stochastic_conductance(sim, V), repeat=args.repeat
-    )
-    t_current, _ = timeit(
-        lambda: calculate_input_current(sim, V), repeat=args.repeat
-    )
+    t_update, _ = timeit(lambda: update_stochastic_conductance(sim, V), repeat=args.repeat)
+    t_current, _ = timeit(lambda: calculate_input_current(sim, V), repeat=args.repeat)
 
     per_step_total = t_build + t_solve + t_update + t_current
     print(format_row("build_admittance_matrix", t_build))
@@ -101,8 +100,9 @@ def main() -> None:
     print("-" * 52)
     print(format_row("per-step total", per_step_total))
     print()
-    print(f"Estimated full run ({args.steps} steps): "
-          f"{setup_time + per_step_total * args.steps:.1f} s")
+    print(
+        f"Estimated full run ({args.steps} steps): {setup_time + per_step_total * args.steps:.1f} s"
+    )
     print()
 
 

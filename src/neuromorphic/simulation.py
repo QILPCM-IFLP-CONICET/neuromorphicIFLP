@@ -14,7 +14,7 @@ from .load_config import load_parameters
 def setup_simulation(
     filepath: str | None = None,
     parms: dict[str, Any] | None = None,
-    prune:bool=True,
+    prune: bool = True,
 ) -> dict[str, Any]:
     """Construye el diccionario completo de simulación.
 

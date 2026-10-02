@@ -178,6 +178,7 @@ def prune_dead_components(simulation: dict) -> int:
         terminals["output_nodes"] = output_alive
     return len(to_remove)
 
+
 # ==============================================================================
 # FUNCIONES DE PERCOLACIÓN Y CAMINOS
 # ==============================================================================
