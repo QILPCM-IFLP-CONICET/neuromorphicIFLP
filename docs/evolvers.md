@@ -89,8 +89,7 @@ max_jumps = 2
 def mi_evolver(
     simulation: dict[str, Any],
     V_solved: np.ndarray,
-) -> "networkx.Graph":
-    ...
+) -> "networkx.Graph": ...
 ~~~
 
 Recibe el diccionario completo de simulación y el vector de voltajes
