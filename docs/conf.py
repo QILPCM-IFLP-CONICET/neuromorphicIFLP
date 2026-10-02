@@ -1,7 +1,6 @@
 # docs/conf.py
 """Configuración de Sphinx para neuromorphicNWLamas."""
 
-import os
 import sys
 from pathlib import Path
 

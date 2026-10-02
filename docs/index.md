@@ -26,9 +26,3 @@ arquitectura
 api/modules
 ```
 
-```{toctree}
-:maxdepth: 1
-:caption: Histórico
-
-guia
-```
