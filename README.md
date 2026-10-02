@@ -94,11 +94,16 @@ estados:
 | OFF    | `G_OFF`      | SET por voltaje |
 | ON     | `G_ON`       | RESET por corriente |
 
-La actualización sigue las probabilidades reportadas en Lamas et al.
-(2026):
+El evolver `stochastic2` implementa las probabilidades reportadas en
+Lamas et al. (2026):
 
 - **SET**: P_set = Δt · P₀ · max(0, 1 − exp[−α(V_mem − V_th)])
 - **RESET**: P_reset = min(1, Δt · P_decay · I_mem²)
+
+donde I_mem = G_ON · V_mem es la corriente a través de la juntura. El
+evolver por defecto, `stochastic1`, usa una variante anterior sin
+dependencia en Δt ni en la corriente (ver
+[`docs/evolvers.md`](docs/evolvers.md)).
 
 En cada paso temporal se resuelve el sistema Y · V = I sobre la matriz
 de admitancia dispersa del grafo, aplicando condiciones de contorno de

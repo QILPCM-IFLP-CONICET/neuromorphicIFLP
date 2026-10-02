@@ -121,7 +121,13 @@ existe reemplaza la función anterior sin emitir advertencia.
 
 | Nombre | Descripción |
 |---|---|
-| `stochastic1` | SET/RESET estocástico con facilitación y relajación volátil (Lamas et al., 2026). Modelo por defecto. |
+| `stochastic1` | SET por sobretensión con P = P0·exp[α(V−V_th)] y RESET con P = P_decay·exp(−V/V_th). Las probabilidades son por paso y no escalan con `TIME_STEP_DT`. Modelo por defecto. |
+| `stochastic2` | Modelo de Lamas et al. (2026): P_set = Δt·P0·max(0, 1 − exp[−α(V−V_th)]) y P_reset = min(1, Δt·P_decay·I²), con I = G_ON·V. `P0_SET` está en s⁻¹ y `P_DECAY` en A⁻²·s⁻¹. |
+
+> Los valores de `defaults.ini` están calibrados para `stochastic1`. Con
+> `stochastic2` las mismas cifras tienen otras unidades: por ejemplo,
+> con `G_ON = 1e-3` S y caídas de ~1 V, `P_DECAY = 0.8` da una
+> probabilidad de RESET del orden de 10⁻⁹ por paso.
 
 ## Ver también
 
