@@ -6,7 +6,7 @@ import copy
 
 import matplotlib
 
-from neuromorphic.simulador import run_simulation_dynamic_pulse
+from neuromorphic.dinamica import run_simulation_dynamic_pulse
 
 matplotlib.use("Agg")  # headless backend for CI
 

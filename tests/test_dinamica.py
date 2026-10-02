@@ -7,7 +7,7 @@ from itertools import pairwise
 import numpy as np
 import pytest
 
-from neuromorphic.simulador import run_simulation_dynamic_pulse
+from neuromorphic.dinamica import run_simulation_dynamic_pulse
 
 
 # ---------------------------------------------------------------------------
