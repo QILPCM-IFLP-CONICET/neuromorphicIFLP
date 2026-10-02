@@ -9,7 +9,7 @@ import numpy as np
 # ==============================================================================
 # CONSTRUCCIÓN DEL GRAFO
 # ==============================================================================
-def build_graph2(simulation: dict[str, Any]) -> None:
+def build_graph(simulation: dict[str, Any]) -> None:
     """Construye el grafo topológico de la red con duplicación de nodos.
 
     Por cada juntura física se crean dos nodos en el grafo (uno por cada
@@ -90,7 +90,7 @@ def build_graph2(simulation: dict[str, Any]) -> None:
 # ==============================================================================
 # DETECCIÓN DE ELECTRODOS
 # ==============================================================================
-def find_electrode_nodes2(simulation: dict[str, Any]) -> None:
+def find_electrode_nodes(simulation: dict[str, Any]) -> None:
     """Identifica los nodos del grafo que actúan como electrodos.
 
     Un nodo es electrodo de entrada si su coordenada ``x`` es menor que
@@ -128,6 +128,55 @@ def find_electrode_nodes2(simulation: dict[str, Any]) -> None:
         "output_nodes": output_nodes,
     }
     return
+
+
+# ==============================================================================
+# ELIMINA SUB-GRAFOS DESCONECTADOS
+# ==============================================================================
+def prune_dead_components(simulation: dict) -> int:
+    """Elimina del grafo los nodos que no están conectados a ningún electrodo.
+
+    Un nodo es "vivo" si pertenece a la misma componente conexa que al
+    menos un nodo de entrada o de salida. Los nodos flotantes no
+    transportan corriente y vuelven la matriz de admitancia singular
+    cuando ``G_LEAK`` es muy pequeño.
+
+    Parameters
+    ----------
+    simulation : dict
+        Diccionario con ``"graph"`` y ``"terminals"``.
+
+    Returns
+    -------
+    int
+        Cantidad de nodos eliminados.
+    """
+    G = simulation["graph"]
+    terminals = simulation["terminals"]
+
+    live_seeds = set(terminals["input_nodes"]) | set(terminals["output_nodes"])
+    if not live_seeds:
+        return 0
+
+    keep = set()
+    for seed in live_seeds:
+        keep |= nx.node_connected_component(G, seed)
+
+    to_remove = set(G.nodes) - keep
+    if to_remove:
+        G.remove_nodes_from(to_remove)
+
+        input_alive = [n for n in terminals["input_nodes"] if n in G]
+        output_alive = [n for n in terminals["output_nodes"] if n in G]
+        if not input_alive or not output_alive:
+            raise RuntimeError(
+                "Después del prune no quedan electrodos en el grafo vivo. "
+                "La red probablemente no percola."
+            )
+        # Filtrar terminals por si algún electrodo quedó fuera
+        terminals["input_nodes"] = input_alive
+        terminals["output_nodes"] = output_alive
+    return len(to_remove)
 
 
 # ==============================================================================

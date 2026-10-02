@@ -121,7 +121,7 @@ from neuromorphic import (
     setup_simulation,
     run_simulation_dynamic_pulse,
     plot_simulation_results,
-    update_stochastic_conductance2,
+    update_stochastic_conductance,
 )
 ```
 
@@ -138,6 +138,21 @@ por módulo e integración end-to-end con redes por encima y por debajo
 del umbral de percolación.
 
 ---
+
+
+
+## Benchmarks
+
+Para medir el rendimiento del setup y del hot loop:
+
+```bash
+python scripts/benchmarks.py
+```
+
+Los valores por defecto (N=1500, seed=42) tardan menos de dos segundos
+en total. Ajustá con `--n-wires`, `--steps` y `--repeat` según lo que
+necesites.
+
 
 ## Referencia
 

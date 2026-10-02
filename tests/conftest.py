@@ -57,6 +57,17 @@ def _sim_small_base(small_params):
 
 
 @pytest.fixture(scope="session")
+def _sim_small_unpruned(small_params):
+    """Red chica sin podar, para tests estructurales del grafo."""
+    return setup_simulation(parms=small_params, prune=False)
+
+
+@pytest.fixture
+def sim_small_unpruned(_sim_small_unpruned):
+    return copy.deepcopy(_sim_small_unpruned)
+
+
+@pytest.fixture(scope="session")
 def _sim_percolating_base(percolating_params):
     return setup_simulation(parms=percolating_params)
 

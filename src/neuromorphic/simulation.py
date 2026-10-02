@@ -5,15 +5,16 @@ from __future__ import annotations
 
 from typing import Any
 
-from .fisica import build_admittance_matrix2
+from .fisica import build_admittance_matrix
 from .geometria import generate_and_find_junctions
-from .grafo import build_graph2, find_electrode_nodes2
-from .load_config import cargar_parametros
+from .grafo import build_graph, find_electrode_nodes, prune_dead_components
+from .load_config import load_parameters
 
 
 def setup_simulation(
     filepath: str | None = None,
     parms: dict[str, Any] | None = None,
+    prune: bool = True,
 ) -> dict[str, Any]:
     """Construye el diccionario completo de simulación.
 
@@ -31,6 +32,10 @@ def setup_simulation(
         disparan :class:`~neuromorphic.load_config.UnknownParameterWarning`
         y se ignoran.
 
+    prune: bool
+        Si es True, poda los sub-grafos desconectados del resto.
+        Default: ``True``.
+
     Returns
     -------
     dict
@@ -44,12 +49,14 @@ def setup_simulation(
 
     See Also
     --------
-    cargar_parametros : carga y valida los parámetros.
+    load_parameters : carga y valida los parámetros.
     run_simulation_dynamic_pulse : corre el experimento de pulso.
     """
-    simulation = cargar_parametros(filepath, parms=parms)
+    simulation = load_parameters(filepath, parms=parms)
     generate_and_find_junctions(simulation)
-    build_graph2(simulation)
-    find_electrode_nodes2(simulation)
-    build_admittance_matrix2(simulation)
+    build_graph(simulation)
+    find_electrode_nodes(simulation)
+    if prune:
+        prune_dead_components(simulation)
+    build_admittance_matrix(simulation)
     return simulation

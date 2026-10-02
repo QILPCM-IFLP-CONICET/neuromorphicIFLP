@@ -104,7 +104,7 @@ def run_simulation_dynamic_pulse(simulation: dict[str, Any]):
         v_now = V_PULSE if current_time <= T_PULSE else V_READ
 
         # 1) Resolver el circuito con el voltaje actual
-        Y, I_vec, _ = fis.build_admittance_matrix2(simulation, v_input=v_now)
+        Y, I_vec, _ = fis.build_admittance_matrix(simulation, v_input=v_now)
         try:
             V_vec = spsolve(Y, I_vec)
         except Exception as e:
@@ -127,7 +127,7 @@ def run_simulation_dynamic_pulse(simulation: dict[str, Any]):
         history_active.append(count_ON)
 
         # 4) Actualización estocástica (muta G in-place)
-        fis.update_stochastic_conductance2(simulation, V_vec)
+        fis.update_stochastic_conductance(simulation, V_vec)
 
         current_time += dt
 
