@@ -33,9 +33,6 @@ class EvolverSpec:
     parameters: Mapping[str, Any] = field(default_factory=dict)
 
 
-EVOLVE_MODELS: dict[str, EvolverFn] = {}
-"""Nombre -> función de update. Se mantiene por compatibilidad."""
-
 EVOLVER_SPECS: dict[str, EvolverSpec] = {}
 """Nombre -> :class:`EvolverSpec` completa."""
 
@@ -79,7 +76,6 @@ def register_memristor_evol_model(
     """
 
     def _register(fn: _F) -> _F:
-        EVOLVE_MODELS[name] = fn
         EVOLVER_SPECS[name] = EvolverSpec(
             update=fn,
             init=init if init is not None else init_all_off,

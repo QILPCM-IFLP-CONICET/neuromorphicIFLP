@@ -1,7 +1,6 @@
 from .admitancia import build_admittance_matrix
 from .corrientes import calculate_input_current, calculate_output_current
 from .evolvers import (
-    EVOLVE_MODELS,
     EVOLVER_SPECS,
     initialize_evolver,
     register_memristor_evol_model,

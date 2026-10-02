@@ -3,9 +3,9 @@
 import numpy as np
 import pytest
 
-from neuromorphic.fisica import EVOLVE_MODELS
+from neuromorphic.fisica import EVOLVER_SPECS
 
-stochastic2 = EVOLVE_MODELS["stochastic2"]
+stochastic2 = EVOLVER_SPECS["stochastic2"].update
 
 
 # ---------------------------------------------------------------------------
@@ -38,7 +38,7 @@ def _assert_binomial(n_switched: int, n: int, p: float, n_sigma: float = 5.0) ->
 
 
 def test_stochastic2_is_registered():
-    assert "stochastic2" in EVOLVE_MODELS
+    assert "stochastic2" in EVOLVER_SPECS
 
 
 def test_each_node_belongs_to_one_memristor(sim_percolating):
@@ -180,7 +180,6 @@ def tmp_model():
     yield names
     for name in names:
         EVOLVER_SPECS.pop(name, None)
-        EVOLVE_MODELS.pop(name, None)
 
 
 def test_custom_init_and_parameter_defaults(sim_percolating, tmp_model):
@@ -234,7 +233,7 @@ def test_binary_models_keep_mask_in_sync(sim_percolating, name):
     p["TIME_STEP_DT"] = 1.0
     _set_state(sim_percolating, p["G_OFF"])
 
-    EVOLVE_MODELS[name](sim_percolating, _voltages_with_vmem(sim_percolating, 1.0))
+    EVOLVER_SPECS[name].update(sim_percolating, _voltages_with_vmem(sim_percolating, 1.0))
 
     circuit = sim_percolating["circuit"]
     assert circuit["memristor_active"].any()

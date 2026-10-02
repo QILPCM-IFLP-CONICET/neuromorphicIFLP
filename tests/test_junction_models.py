@@ -8,7 +8,7 @@ import warnings
 import numpy as np
 import pytest
 
-from neuromorphic.fisica import EVOLVE_MODELS, initialize_evolver
+from neuromorphic.fisica import EVOLVER_SPECS, initialize_evolver
 from neuromorphic.fisica.evolvers._junction import G0, filament_closed, make_ladder
 from neuromorphic.fisica.evolvers.thermal import StepSaturationWarning, thermal_conductance
 
@@ -20,7 +20,7 @@ def _select(sim, name, **params):
     sim["parameters"]["EVOLVER"] = name
     sim["parameters"].update(params)
     initialize_evolver(sim)
-    return EVOLVE_MODELS[name]
+    return EVOLVER_SPECS[name].update
 
 
 def _voltages_with_vmem(sim, v_mem) -> np.ndarray:

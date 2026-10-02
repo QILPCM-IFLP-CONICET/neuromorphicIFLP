@@ -103,9 +103,8 @@ def test_declared_evolver_parameter_does_not_warn():
         assert p["_TMP_RATE"] == 2.5
     finally:
         EVOLVER_SPECS.pop("_tmp_declared")
-        from neuromorphic.fisica import EVOLVE_MODELS
 
-        EVOLVE_MODELS.pop("_tmp_declared")
+
 
 
 def test_array_parameter_is_accepted():
