@@ -1,7 +1,5 @@
 """End-to-end tests across the full simulation pipeline."""
 
-
-
 import numpy as np
 
 from neuromorphic import setup_simulation
