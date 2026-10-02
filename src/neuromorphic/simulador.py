@@ -49,6 +49,7 @@ def run_simulation_dynamic_pulse(simulation: dict[str, Any]):
     terminals = simulation["terminals"]
     input_nodes = terminals["input_nodes"]
     output_nodes = terminals["output_nodes"]
+    update_conductance = fis.EVOLVE_MODELS[p["EVOLVER"]]
 
     if len(input_nodes) == 0 or len(output_nodes) == 0:
         raise RuntimeError(
@@ -127,7 +128,7 @@ def run_simulation_dynamic_pulse(simulation: dict[str, Any]):
         history_active.append(count_ON)
 
         # 4) Actualización estocástica (muta G in-place)
-        fis.update_stochastic_conductance(simulation, V_vec)
+        update_conductance(simulation, V_vec)
 
         current_time += dt
 

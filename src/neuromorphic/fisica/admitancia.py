@@ -202,4 +202,3 @@ def build_admittance_matrix(
     circuit["Y"] = Y
     circuit["I"] = I_vec
     return Y, I_vec, circuit["node_to_index"]
-

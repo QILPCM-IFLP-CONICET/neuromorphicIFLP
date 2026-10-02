@@ -1,10 +1,6 @@
 # corrientes.py
 from typing import Any
 
-import numpy as np
-from scipy.sparse import coo_matrix
-
-
 
 # ==============================================================================
 # CÁLCULOS DE CORRIENTES
@@ -92,5 +88,3 @@ def calculate_output_current(simulation: dict[str, Any], V_solved) -> float:
             V_n = V_solved[node_to_index[neighbor]]
             total += (V_n - V_out) * g
     return total
-
-

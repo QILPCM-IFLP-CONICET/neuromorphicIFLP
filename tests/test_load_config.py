@@ -132,6 +132,7 @@ def test_explicit_filepath_is_used(tmp_path):
                 "g_on = 1e-3",
                 "g_off = 1e-9",
                 "v_threshold = 0.01",
+                'evolver_model = "stochastic1"',
                 "",
                 "[Probabilities]",
                 "p0_set = 0.4",

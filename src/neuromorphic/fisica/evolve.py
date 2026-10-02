@@ -1,14 +1,22 @@
-
 # evolve.py
 from typing import Any
 
 import numpy as np
-from scipy.sparse import coo_matrix
+
+EVOLVE_MODELS = {}
+
+
+def register_evol_model(name: str):
+    def _register(fn):
+        EVOLVE_MODELS[name] = fn
+
+    return _register
 
 
 # ==============================================================================
 # ACTUALIZACIÓN ESTOCÁSTICA DE MEMRISTORES
 # ==============================================================================
+@register_evol_model("stochastic1")
 def update_stochastic_conductance(simulation: dict[str, Any], V_solved):
     """Actualiza estocásticamente el estado de los memristores.
 
@@ -91,5 +99,3 @@ def update_stochastic_conductance(simulation: dict[str, Any], V_solved):
             G.edges[u, v]["conductance"] = G_OFF
 
     return G
-
-

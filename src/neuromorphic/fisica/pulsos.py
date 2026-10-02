@@ -1,8 +1,6 @@
 # pulsos.py
-from typing import Any
 
 import numpy as np
-from scipy.sparse import coo_matrix
 
 
 # ==============================================================================
