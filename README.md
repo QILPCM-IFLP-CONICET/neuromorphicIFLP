@@ -139,6 +139,21 @@ del umbral de percolación.
 
 ---
 
+
+
+## Benchmarks
+
+Para medir el rendimiento del setup y del hot loop:
+
+```bash
+python scripts/benchmarks.py
+```
+
+Los valores por defecto (N=1500, seed=42) tardan menos de dos segundos
+en total. Ajustá con `--n-wires`, `--steps` y `--repeat` según lo que
+necesites.
+
+
 ## Referencia
 
 Este código implementa el modelo descrito en:
