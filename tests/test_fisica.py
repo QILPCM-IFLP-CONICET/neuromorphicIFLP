@@ -7,10 +7,10 @@ import pytest
 from scipy.sparse import csr_matrix
 
 from neuromorphic.fisica import (
+    EVOLVE_MODELS,
     build_admittance_matrix,
     calculate_input_current,
     calculate_output_current,
-    update_stochastic_conductance,
 )
 
 
@@ -56,38 +56,47 @@ def test_circuit_is_stored_in_simulation(sim_small):
 # ---------------------------------------------------------------------------
 # Stochastic conductance update
 # ---------------------------------------------------------------------------
-def test_update_returns_same_graph(sim_percolating):
+@pytest.mark.parametrize(
+    ["evolver_name", "evolver_fn"], [(name, fn) for name, fn in EVOLVE_MODELS.items()]
+)
+def test_update_returns_same_graph(sim_percolating, evolver_name, evolver_fn):
     G = sim_percolating["graph"]
     Y, I_vec, _ = build_admittance_matrix(sim_percolating)
     from scipy.sparse.linalg import spsolve
 
     V = spsolve(Y, I_vec)
-    G_returned = update_stochastic_conductance(sim_percolating, V)
+    G_returned = evolver_fn(sim_percolating, V)
     assert G_returned is G
 
 
-def test_only_memristor_edges_change_state(sim_percolating):
+@pytest.mark.parametrize(
+    ["evolver_name", "evolver_fn"], [(name, fn) for name, fn in EVOLVE_MODELS.items()]
+)
+def test_only_memristor_edges_change_state(sim_percolating, evolver_name, evolver_fn):
     """Non-memristor edges must never carry a 'conductance' attribute."""
     G = sim_percolating["graph"]
     Y, I_vec, _ = build_admittance_matrix(sim_percolating)
     from scipy.sparse.linalg import spsolve
 
     V = spsolve(Y, I_vec)
-    update_stochastic_conductance(sim_percolating, V)
+    evolver_fn(sim_percolating, V)
 
     for _, _, data in G.edges(data=True):
         if not data.get("is_memristor", False):
             assert "conductance" not in data
 
 
-def test_zero_voltage_does_not_trigger_set(sim_percolating):
+@pytest.mark.parametrize(
+    ["evolver_name", "evolver_fn"], [(name, fn) for name, fn in EVOLVE_MODELS.items()]
+)
+def test_zero_voltage_does_not_trigger_set(sim_percolating, evolver_name, evolver_fn):
     """With V_mem = 0 everywhere, no memristor should turn ON."""
     p = sim_percolating["parameters"]
     G = sim_percolating["graph"]
     n = G.number_of_nodes()
     V_zero = np.zeros(n)
 
-    update_stochastic_conductance(sim_percolating, V_zero)
+    evolver_fn(sim_percolating, V_zero)
 
     n_on = sum(
         1

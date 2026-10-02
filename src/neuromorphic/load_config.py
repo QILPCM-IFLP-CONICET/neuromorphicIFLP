@@ -183,12 +183,14 @@ def _parse_ini(fh) -> dict[str, Any]:
     params["G_ON"] = config.getfloat("Memristor", "g_on")
     params["G_OFF"] = config.getfloat("Memristor", "g_off")
     params["V_THRESHOLD"] = config.getfloat("Memristor", "v_threshold")
+    params["EVOLVER"] = config.get("Memristor", "evolver_model")
 
     # Probabilities
     params["P0_SET"] = config.getfloat("Probabilities", "p0_set")
     params["ALPHA_SET"] = config.getfloat("Probabilities", "alpha_set")
     params["P_DECAY"] = config.getfloat("Probabilities", "p_decay")
     params["BETA_RESET"] = config.getfloat("Probabilities", "beta_reset")
+    params["RNG_SEED"] = config.getint("Probabilities", "seed")
 
     return params
 
