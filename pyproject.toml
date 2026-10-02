@@ -43,6 +43,14 @@ dev = [
     "types-networkx",
     "scipy-stubs",
 ]
+docs = [
+    "sphinx>=7.0",
+    "myst-parser>=2.0",
+    "furo>=2024.0",          # tema moderno, alternativa a sphinx_rtd_theme
+    "sphinx-autobuild>=2024.0",  # preview con recarga en vivo
+    "sphinx-copybutton",
+    "sphinx-design",
+]
 
 
 [project.urls]

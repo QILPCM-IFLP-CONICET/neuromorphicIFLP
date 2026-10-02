@@ -1,12 +1,18 @@
 # evolve.py
-from typing import Any
+from collections.abc import Callable
+from typing import Any, TypeVar
 
 import numpy as np
 
-EVOLVE_MODELS = {}
+EvolverFn = Callable[[dict[str, Any], np.ndarray], Any]
+EVOLVE_MODELS: dict[str, EvolverFn] = {}
+
+_F = TypeVar("_F", bound=EvolverFn)
 
 
-def register_memristor_evol_model(name: str):
+def register_memristor_evol_model(name: str) -> Callable[[_F], _F]:
+    """Decorador que registra un evolver en ``EVOLVE_MODELS`` bajo ``name``."""
+
     def _register(fn):
         EVOLVE_MODELS[name] = fn
         return fn

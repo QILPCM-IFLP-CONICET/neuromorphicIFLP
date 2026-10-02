@@ -52,8 +52,8 @@ def _precompute_circuit_arrays(simulation: dict[str, Any]) -> None:
 
     mem_edge_idx = np.flatnonzero(is_mem)
     mem_g = np.empty(mem_count, dtype=np.float64)
-    for j, i in enumerate(mem_edge_idx):
-        mem_g[j] = edges[i][2]["conductance"]
+    for j, edge_pos in enumerate(mem_edge_idx):
+        mem_g[j] = edges[edge_pos][2]["conductance"]
 
     input_idx = np.array(
         [node_to_index[n] for n in simulation["terminals"]["input_nodes"]],
