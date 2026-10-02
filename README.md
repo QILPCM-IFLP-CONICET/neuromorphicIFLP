@@ -112,7 +112,7 @@ Lamas et al. (2026):
 donde I_mem = G_ON · V_mem es la corriente a través de la juntura. El
 evolver por defecto, `stochastic1`, usa una variante anterior sin
 dependencia en Δt ni en la corriente (ver
-[`docs/evolvers.md`](docs/evolvers.md)).
+[`docs/evolvers.md`](https://github.com/QILPCM-IFLP-CONICET/neuromorphicNWLamas/blob/main/docs/evolvers.md)).
 
 En cada paso temporal se resuelve el sistema Y · V = I sobre la matriz
 de admitancia dispersa del grafo, aplicando condiciones de contorno de

@@ -2,5 +2,5 @@
 
 ```{include} ../README.md
 :start-after: "## Instalación"
-:end-before: "## Uso rápido"
+:end-before: "---"
 ```
