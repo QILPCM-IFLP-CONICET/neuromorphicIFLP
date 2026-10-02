@@ -56,8 +56,11 @@ sim = setup_simulation(parms={
 })
 ```
 
-Las claves desconocidas en `parms` emiten `UnknownParameterWarning` y se
-ignoran. Los valores derivados (`PROXIMITY_THRESHOLD`,
+Todas las claves de `parms` se incorporan a `simulation["parameters"]`,
+incluidos arrays (por ejemplo, un valor por juntura para introducir
+desorden). Las que no son claves del núcleo ni parámetros declarados por
+un modelo de evolución emiten `UnknownParameterWarning`, como aviso ante
+posibles errores de tipeo. Los valores derivados (`PROXIMITY_THRESHOLD`,
 `R_WIRE_PER_LENGTH`, `TOTAL_TIME`) se recalculan automáticamente después
 del merge.
 

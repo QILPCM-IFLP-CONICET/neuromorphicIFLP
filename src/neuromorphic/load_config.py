@@ -9,10 +9,18 @@ Design
   entry point. It never searches the current working directory
   implicitly: if ``filepath`` is None, only the package defaults are used.
 
-Unknown keys in ``parms`` trigger an ``UnknownParameterWarning`` and are
-ignored (they do not override anything).
+Keys in ``parms`` are always merged into the parameter dict. Keys that are
+neither core keys (:data:`KNOWN_RAW_KEYS`) nor declared by a registered
+evolution model trigger an ``UnknownParameterWarning`` (to surface typos),
+but are kept: models and user code may read extra parameters.
+
+Besides the fixed sections, an ``.ini`` may contain an optional
+``[Evolver]`` section with free-form keys. Each key is upper-cased and its
+value parsed as a Python literal when possible (numbers, lists, booleans),
+falling back to the raw string.
 """
 
+import ast
 import configparser
 import warnings
 from importlib.resources import files
@@ -25,11 +33,12 @@ DEFAULT_INI_NAME = "defaults.ini"
 
 
 class UnknownParameterWarning(UserWarning):
-    """Emitted when ``parms`` contains keys not present in the loaded file."""
+    """Emitted when ``parms`` contains keys nobody declared (likely a typo)."""
 
 
-# Keys exposed in the parameter dict. Kept explicit so that typos in
-# ``parms`` are surfaced as warnings rather than silently ignored.
+# Core keys of the parameter dict. Kept explicit so that typos in ``parms``
+# are surfaced as warnings. Evolution models declare their own keys at
+# registration (see ``register_memristor_evol_model``).
 KNOWN_RAW_KEYS: frozenset[str] = frozenset(
     {
         # Network
@@ -88,10 +97,11 @@ def load_parameters(
         se usa el ``defaults.ini`` empaquetado con la librería. No hay
         búsqueda implícita en el directorio actual.
     parms : dict, optional
-        Overrides aplicados sobre los valores del archivo. Las claves
-        desconocidas disparan :class:`UnknownParameterWarning` y se
-        ignoran. Los valores derivados se recalculan automáticamente
-        después del merge.
+        Overrides y parámetros adicionales, aplicados sobre los valores
+        del archivo. Todas las claves se incorporan. Las que no son
+        claves del núcleo ni fueron declaradas por un modelo de evolución
+        registrado disparan :class:`UnknownParameterWarning`. Los valores
+        derivados se recalculan automáticamente después del merge.
 
     Returns
     -------
@@ -110,7 +120,8 @@ def load_parameters(
     -----
     UnknownParameterWarning
         Si ``parms`` contiene claves que no pertenecen a
-        :data:`KNOWN_RAW_KEYS`.
+        :data:`KNOWN_RAW_KEYS` ni a los parámetros declarados por los
+        modelos de evolución registrados.
 
     See Also
     --------
@@ -119,16 +130,18 @@ def load_parameters(
     params = _load_defaults() if filepath is None else _load_ini(Path(filepath))
 
     if parms is not None:
-        unknown = set(parms) - KNOWN_RAW_KEYS
+        from .fisica.evolvers import declared_evolver_parameters
+
+        unknown = set(parms) - KNOWN_RAW_KEYS - declared_evolver_parameters()
         if unknown:
             warnings.warn(
-                f"Ignoring unknown parameter(s): {sorted(unknown)}. "
-                f"Known raw keys: {sorted(KNOWN_RAW_KEYS)}",
+                f"Undeclared parameter(s) {sorted(unknown)} were added. "
+                "Check for typos; known core keys: "
+                f"{sorted(KNOWN_RAW_KEYS)}",
                 UnknownParameterWarning,
                 stacklevel=2,
             )
-        accepted = {k: v for k, v in parms.items() if k in KNOWN_RAW_KEYS}
-        params.update(accepted)
+        params.update(parms)
 
     _recompute_derived(params)
     return {"parameters": params}
@@ -194,7 +207,20 @@ def _parse_ini(fh) -> dict[str, Any]:
     params["BETA_RESET"] = config.getfloat("Probabilities", "beta_reset")
     params["RNG_SEED"] = config.getint("Probabilities", "seed")
 
+    # Optional free-form section for evolution-model parameters
+    if config.has_section("Evolver"):
+        for key, raw in config.items("Evolver"):
+            params[key.upper()] = _parse_value(raw)
+
     return params
+
+
+def _parse_value(raw: str) -> Any:
+    """Parse an ``.ini`` value as a Python literal, else return the string."""
+    try:
+        return ast.literal_eval(raw)
+    except (ValueError, SyntaxError):
+        return raw
 
 
 def _recompute_derived(params: dict[str, Any]) -> None:

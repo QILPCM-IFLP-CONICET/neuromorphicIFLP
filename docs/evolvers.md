@@ -33,12 +33,57 @@ evolver_model = stochastic1
 sim = setup_simulation(parms={"EVOLVER": "stochastic1"})
 ~~~
 
-El valor debe coincidir con una clave ya registrada en
-`neuromorphic.fisica.evolvers.EVOLVE_MODELS`. Si no existe, el motor
-falla con `KeyError` en el primer paso temporal: la búsqueda es *lazy*,
-no hay validación temprana en `setup_simulation`.
+El valor debe coincidir con un modelo registrado en
+`neuromorphic.fisica.EVOLVER_SPECS`. Si no existe, `setup_simulation`
+falla con `KeyError` y la lista de modelos disponibles.
 
-## Contrato de un evolver
+## Componentes de un modelo
+
+Un modelo se registra con
+
+~~~python
+@register_memristor_evol_model(name, init=None, parameters=None)
+def update(simulation, V_solved): ...
+~~~
+
+y queda descrito por un `EvolverSpec(update, init, parameters)`:
+
+| Componente | Rol |
+|---|---|
+| `update(simulation, V_solved)` | Avanza un paso temporal. Obligatorio. |
+| `init(simulation)` | Fija el estado inicial y precalcula lo que el modelo necesite. Opcional; por defecto, todos los memristores en `G_OFF`. |
+| `parameters` | Dict `{CLAVE: valor_por_defecto}` con los parámetros propios del modelo. Opcional. |
+
+### Ciclo de vida
+
+`initialize_evolver(simulation)` prepara el modelo indicado en
+`parameters["EVOLVER"]`:
+
+1. completa en `simulation["parameters"]` las claves de `parameters` que
+   falten, sin pisar valores ya definidos por el `.ini` o por `parms=`;
+2. recrea `simulation["evolver_state"]` como un dict vacío;
+3. llama a `init(simulation)`.
+
+La llaman `setup_simulation`, al final, y `run_simulation_dynamic_pulse`,
+al comienzo de cada corrida. Por eso correr dos veces la misma
+simulación parte siempre del mismo estado inicial.
+
+### Parámetros propios
+
+Las claves declaradas en `parameters` se aceptan en `parms=` sin
+advertencias y conviven con el resto en `simulation["parameters"]`.
+Pueden ser escalares o arrays con un valor por memristor (en el orden de
+`memristor_g`). También pueden definirse en el `.ini`, en una sección
+libre `[Evolver]`: cada clave se pasa a mayúsculas y su valor se
+interpreta como literal de Python.
+
+~~~ini
+[Evolver]
+nu_up = 1e3
+max_jumps = 2
+~~~
+
+## Contrato de `update`
 
 ~~~python
 def mi_evolver(
@@ -49,17 +94,22 @@ def mi_evolver(
 ~~~
 
 Recibe el diccionario completo de simulación y el vector de voltajes
-nodales recién resuelto (`Y · V = I`). Debe **mutar in-place** dos
-estructuras de forma coherente:
+nodales recién resuelto (`Y · V = I`). Debe mantener coherentes tres
+estructuras (`init` también debe dejarlas coherentes):
 
 | Estructura | Descripción |
 |---|---|
-| `simulation["circuit"]["memristor_g"]` | Array `float64` con la conductancia actual de cada memristor. Lo consume `build_admittance_matrix`. |
-| `simulation["graph"].edges[u, v]["conductance"]` | Valor espejo en las aristas del grafo. Lo usan diagnósticos y visualización. |
+| `simulation["circuit"]["memristor_g"]` | Array `float64` con la conductancia actual de cada memristor. Lo consume `build_admittance_matrix`. Se modifica in-place. |
+| `simulation["graph"].edges[u, v]["conductance"]` | Valor espejo en las aristas del grafo. Lo usan el cálculo de corrientes, diagnósticos y visualización. |
+| `simulation["circuit"]["memristor_active"]` | Máscara booleana de memristores "activos". El motor reporta su suma en cada paso. Para modelos binarios es `memristor_g == G_ON`; un modelo de conductancia continua define su propio criterio. |
+
+El estado interno del modelo (variables por juntura, tablas
+precalculadas, generadores aleatorios, diagnósticos) va en
+`simulation["evolver_state"]`.
 
 También están disponibles:
 
-- `simulation["parameters"]` — parámetros crudos y derivados.
+- `simulation["parameters"]` — parámetros crudos, derivados y propios del modelo.
 - `simulation["circuit"]["mem_edge_keys"]` — lista de tuplas `(u, v)` en
   el mismo orden que `memristor_g`.
 - `simulation["circuit"]["mem_u_idx"]`, `["mem_v_idx"]` — índices en
@@ -75,32 +125,54 @@ convención.
 > evolver la corrida es reproducible. Dos evolvers distintos con la misma
 > semilla no producirán necesariamente las mismas conmutaciones, porque
 > consumen el generador en distinto orden. Por ahora el paquete no admite
-> inyectar un `np.random.Generator` propio; si tu evolver lo necesita,
-> podés guardarlo en `simulation` vos mismo y leerlo desde la función.
+> inyectar un `np.random.Generator` global; si tu modelo lo necesita,
+> crealo en `init` (por ejemplo con `np.random.default_rng(p["RNG_SEED"])`)
+> y guardalo en `simulation["evolver_state"]`.
 
 ## Registrar un modelo propio
+
+El ejemplo siguiente usa los tres componentes: un parámetro propio
+(`P_FLIP`), un `init` que crea un generador aleatorio en
+`evolver_state`, y un `update` que mantiene coherentes array, grafo y
+máscara.
 
 ~~~python
 import numpy as np
 from neuromorphic.fisica import register_memristor_evol_model
 
 
-@register_memristor_evol_model("siempre_on")
-def siempre_on(simulation, V_solved):
-    """Ejemplo trivial: fuerza todos los memristores a ON."""
+def init_flip(simulation):
     p = simulation["parameters"]
     circuit = simulation["circuit"]
     G = simulation["graph"]
-
-    # 1) Array consumido por build_admittance_matrix
-    circuit["memristor_g"][:] = p["G_ON"]
-
-    # 2) Espejo en el grafo
+    circuit["memristor_g"][:] = p["G_OFF"]
     for u, v in circuit["mem_edge_keys"]:
-        G.edges[u, v]["conductance"] = p["G_ON"]
+        G.edges[u, v]["conductance"] = p["G_OFF"]
+    circuit["memristor_active"] = np.zeros(len(circuit["memristor_g"]), dtype=bool)
+    simulation["evolver_state"]["rng"] = np.random.default_rng(p["RNG_SEED"])
 
+
+@register_memristor_evol_model("flip", init=init_flip, parameters={"P_FLIP": 0.01})
+def flip(simulation, V_solved):
+    """Ejemplo trivial: cada memristor invierte su estado con prob. P_FLIP."""
+    p = simulation["parameters"]
+    circuit = simulation["circuit"]
+    G = simulation["graph"]
+    rng = simulation["evolver_state"]["rng"]
+
+    mem_g = circuit["memristor_g"]
+    flip = rng.random(mem_g.size) < p["P_FLIP"]
+    mem_g[flip] = np.where(mem_g[flip] == p["G_ON"], p["G_OFF"], p["G_ON"])
+    for j in np.flatnonzero(flip):
+        u, v = circuit["mem_edge_keys"][j]
+        G.edges[u, v]["conductance"] = mem_g[j]
+    circuit["memristor_active"] = mem_g == p["G_ON"]
     return G
 ~~~
+
+Para el caso común de fijar todos los memristores en un mismo valor
+existe el helper `set_all_memristors(simulation, g_value)`, que actualiza
+array, grafo y máscara.
 
 Una vez importado el módulo que contiene el decorador, el modelo queda
 disponible para cualquier simulación del proceso:
@@ -108,13 +180,14 @@ disponible para cualquier simulación del proceso:
 ~~~python
 from neuromorphic import setup_simulation, run_simulation_dynamic_pulse
 
-sim = setup_simulation(parms={"EVOLVER": "siempre_on"})
+sim = setup_simulation(parms={"EVOLVER": "flip", "P_FLIP": 0.05})
 t, G_total, activos = run_simulation_dynamic_pulse(sim)
 ~~~
 
 El registro es **global al proceso**: importá el módulo del evolver una
 sola vez (por ejemplo en tu `__init__.py` o al inicio del notebook) antes
-de llamar a `run_simulation_dynamic_pulse`. Registrar un nombre que ya
+de llamar a `setup_simulation`, para que sus parámetros se reconozcan
+como declarados. Registrar un nombre que ya
 existe reemplaza la función anterior sin emitir advertencia.
 
 ## Modelos incluidos

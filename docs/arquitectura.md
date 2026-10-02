@@ -38,7 +38,9 @@ simulation = {
     "junctions": {...},    # geometría de la red
     "graph": <networkx.Graph>,
     "terminals": {...},    # electrodos de entrada/salida
-    "circuit": {...},      # matriz Y, vector I, mapeo de nodos
+    "circuit": {...},      # matriz Y, vector I, mapeo de nodos,
+                           # arrays y máscaras por memristor
+    "evolver_state": {...} # estado propio del modelo de evolución
 }
 ~~~
 
@@ -96,28 +98,23 @@ que clonar el repositorio. Los overrides van todos por `parms=`.
 
 ## Registro de evolvers
 
-`fisica/evolvers/base.py` mantiene un diccionario global
-`EVOLVE_MODELS: dict[str, Callable]`. Cada modelo se registra al momento
-de importar su módulo mediante el decorador
-`register_memristor_evol_model("nombre")`:
-
-~~~python
-EVOLVE_MODELS = {}
-
-def register_memristor_evol_model(name: str):
-    def _register(fn):
-        EVOLVE_MODELS[name] = fn
-        return fn
-    return _register
-~~~
+`fisica/evolvers/base.py` mantiene un registro global
+`EVOLVER_SPECS: dict[str, EvolverSpec]`, donde cada `EvolverSpec` agrupa
+la función de update, una función de inicialización y los parámetros
+propios del modelo con sus valores por defecto. `EVOLVE_MODELS` sigue
+existiendo como vista `nombre -> update`. Cada modelo se registra al
+importar su módulo mediante el decorador
+`register_memristor_evol_model("nombre", init=..., parameters=...)`.
 
 El decorador está reexportado en `neuromorphic.fisica`, de modo que
 `from neuromorphic.fisica import register_memristor_evol_model` es la
 forma recomendada de importarlo. Registrar un nombre ya existente lo
 sobrescribe sin aviso.
 
-El motor temporal resuelve `p["EVOLVER"]` contra ese diccionario en cada
-corrida. La clave se lee del `.ini` como `evolver_model` en la sección
+`initialize_evolver(simulation)` resuelve `p["EVOLVER"]` contra el
+registro, completa los parámetros por defecto del modelo, recrea
+`simulation["evolver_state"]` y llama a `init`. La invocan
+`setup_simulation` y, al comienzo de cada corrida, el motor temporal. La clave se lee del `.ini` como `evolver_model` en la sección
 `[Memristor]`, y puede sobrescribirse con `parms={"EVOLVER": "..."}`.
 
 Ver [`evolvers.md`](evolvers.md) para el contrato completo, la lista de
