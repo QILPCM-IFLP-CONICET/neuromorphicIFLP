@@ -105,8 +105,6 @@ def test_declared_evolver_parameter_does_not_warn():
         EVOLVER_SPECS.pop("_tmp_declared")
 
 
-
-
 def test_array_parameter_is_accepted():
     import numpy as np
 

@@ -86,7 +86,7 @@ def test_update_returns_same_graph(sim_percolating, evolver_name, evolver_spec):
 def test_only_memristor_edges_change_state(sim_percolating, evolver_name, evolver_spec):
     """Non-memristor edges must never carry a 'conductance' attribute."""
     evolver_fn = _select_evolver(sim_percolating, evolver_name)
-    
+
     G = sim_percolating["graph"]
     Y, I_vec, _ = build_admittance_matrix(sim_percolating)
     from scipy.sparse.linalg import spsolve
@@ -104,7 +104,7 @@ def test_only_memristor_edges_change_state(sim_percolating, evolver_name, evolve
 )
 def test_zero_voltage_does_not_trigger_set(sim_percolating, evolver_name, evolver_spec):
     """With V_mem = 0 everywhere, no memristor should turn ON."""
-    evolver_fn =  _select_evolver(sim_percolating, evolver_name)
+    evolver_fn = _select_evolver(sim_percolating, evolver_name)
     p = sim_percolating["parameters"]
     G = sim_percolating["graph"]
     n = G.number_of_nodes()
