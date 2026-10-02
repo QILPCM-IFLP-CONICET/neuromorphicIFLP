@@ -190,6 +190,7 @@ def _parse_ini(fh) -> dict[str, Any]:
     params["ALPHA_SET"] = config.getfloat("Probabilities", "alpha_set")
     params["P_DECAY"] = config.getfloat("Probabilities", "p_decay")
     params["BETA_RESET"] = config.getfloat("Probabilities", "beta_reset")
+    params["RNG_SEED"] = config.getint("Probabilities", "seed")
 
     return params
 

@@ -139,6 +139,7 @@ def test_explicit_filepath_is_used(tmp_path):
                 "alpha_set = 1.0",
                 "p_decay = 0.8",
                 "beta_reset = 1.0",
+                "seed = 42",
             ]
         ),
         encoding="utf-8",

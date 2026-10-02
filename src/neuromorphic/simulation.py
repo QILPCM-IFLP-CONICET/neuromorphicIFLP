@@ -1,9 +1,9 @@
 # simulation.py
 """High-level entry point that assembles a simulation dict."""
 
-from __future__ import annotations
-
 from typing import Any
+
+import numpy as np
 
 from .fisica import build_admittance_matrix
 from .geometria import generate_and_find_junctions
@@ -53,6 +53,7 @@ def setup_simulation(
     run_simulation_dynamic_pulse : corre el experimento de pulso.
     """
     simulation = load_parameters(filepath, parms=parms)
+    np.random.seed(simulation["parameters"]["RNG_SEED"])
     generate_and_find_junctions(simulation)
     build_graph(simulation)
     find_electrode_nodes(simulation)

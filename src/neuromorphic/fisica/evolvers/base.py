@@ -6,7 +6,7 @@ import numpy as np
 EVOLVE_MODELS = {}
 
 
-def register_evol_model(name: str):
+def register_memristor_evol_model(name: str):
     def _register(fn):
         EVOLVE_MODELS[name] = fn
 
@@ -16,8 +16,8 @@ def register_evol_model(name: str):
 # ==============================================================================
 # ACTUALIZACIÓN ESTOCÁSTICA DE MEMRISTORES
 # ==============================================================================
-@register_evol_model("stochastic1")
-def update_stochastic_conductance(simulation: dict[str, Any], V_solved):
+@register_memristor_evol_model("stochastic1")
+def register_memristor_evol_model(simulation: dict[str, Any], V_solved):
     """Actualiza estocásticamente el estado de los memristores.
 
     Vectorizado con NumPy sobre los arrays precalculados en
