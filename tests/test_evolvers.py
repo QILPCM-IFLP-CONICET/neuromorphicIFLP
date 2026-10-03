@@ -263,3 +263,34 @@ def test_all_exports_exist(module):
     mod = importlib.import_module(module)
     missing = [name for name in mod.__all__ if not hasattr(mod, name)]
     assert missing == []
+
+
+# ---------------------------------------------------------------------------
+# Descubrimiento automático de módulos
+# ---------------------------------------------------------------------------
+def test_all_public_model_modules_are_discovered():
+    import sys
+    from pathlib import Path
+
+    import neuromorphic.fisica.evolvers as evolvers_pkg
+
+    pkg_dir = Path(evolvers_pkg.__file__).parent
+    expected = sorted(
+        f.stem for f in pkg_dir.glob("*.py") if not f.stem.startswith("_") and f.stem != "base"
+    )
+    assert expected == evolvers_pkg.MODEL_MODULES
+    for name in expected:
+        assert f"neuromorphic.fisica.evolvers.{name}" in sys.modules
+
+
+def test_private_modules_are_not_imported():
+    """Importar el paquete no carga módulos privados ni dependencias opcionales."""
+    import subprocess
+    import sys
+
+    code = (
+        "import sys, neuromorphic; "
+        "assert 'numba' not in sys.modules; "
+        "assert 'neuromorphic.fisica.evolvers._ladder_numba_kernel' not in sys.modules"
+    )
+    subprocess.run([sys.executable, "-c", code], check=True)

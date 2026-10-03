@@ -106,6 +106,15 @@ propios del modelo con sus valores por defecto. Cada modelo se registra al
 importar su módulo mediante el decorador
 `register_memristor_evol_model("nombre", init=..., parameters=...)`.
 
+Los modelos incluidos en el paquete se descubren solos: al importarse,
+`fisica/evolvers/__init__.py` recorre con `pkgutil.iter_modules` los
+módulos del directorio e importa con `importlib` todos los públicos
+(salvo `base`), en orden alfabético. La lista queda en
+`neuromorphic.fisica.evolvers.MODEL_MODULES`. Los módulos que empiezan
+con `_` no se importan automáticamente; ahí van las utilidades
+compartidas y el código con dependencias opcionales, como el kernel de
+`ladder_numba`, que recién se carga al inicializar ese modelo.
+
 El decorador está reexportado en `neuromorphic.fisica`, de modo que
 `from neuromorphic.fisica import register_memristor_evol_model` es la
 forma recomendada de importarlo. Registrar un nombre ya existente lo

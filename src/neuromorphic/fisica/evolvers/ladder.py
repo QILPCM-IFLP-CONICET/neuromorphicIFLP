@@ -2,12 +2,12 @@
 
 Reformulación de ``stochastic_junction.py``. El estado de cada juntura es
 su conductancia, restringida a una escalera discreta de niveles (ver
-:func:`make_ladder`). En cada paso ``dt``:
+:func:`~neuromorphic.fisica.evolvers._junction.make_ladder`). En cada paso ``dt``:
 
-- saltos hacia arriba ~ Poisson(r_up·dt), r_up = nu_up·sinh(|V| / V_k),
-  con V_k = V_s·gap_k/d (el campo en el gap crece al cerrarse);
-- saltos hacia abajo ~ Poisson(r_dn·dt), r_dn = nu_dn·e^{-β k}·e^{P/P_T};
-- ruptura (k → 0) con tasa r_rp = nu_rp·(P/P_c)^m, P = |I·V|.
+- saltos hacia arriba ~ ``Poisson(r_up·dt)``, ``r_up = nu_up·sinh(|V| / V_k)``,
+  con ``V_k = V_s·gap_k/d`` (el campo en el gap crece al cerrarse);
+- saltos hacia abajo ~ ``Poisson(r_dn·dt)``, ``r_dn = nu_dn·exp(-beta·k)·exp(P/P_T)``;
+- ruptura (``k -> 0``) con tasa ``r_rp = nu_rp·(P/P_c)^m``, ``P = |I·V|``.
 
 El número de saltos en cada dirección se trunca en ``LADDER_MAX_JUMPS``.
 El nivel ``k`` se recupera de ``G``; no hay variables internas por juntura.

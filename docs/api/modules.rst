@@ -35,6 +35,21 @@ Modelos de evolución
 .. automodule:: neuromorphic.fisica.evolvers
    :members:
 
+.. automodule:: neuromorphic.fisica.evolvers.stochastic1
+   :members:
+
+.. automodule:: neuromorphic.fisica.evolvers.stochastic2
+   :members:
+
+.. automodule:: neuromorphic.fisica.evolvers.ladder
+   :members:
+
+.. automodule:: neuromorphic.fisica.evolvers.ladder_numba
+   :members:
+
+.. automodule:: neuromorphic.fisica.evolvers.thermal
+   :members:
+
 Motor temporal
 --------------
 

@@ -189,6 +189,18 @@ de llamar a `setup_simulation`, para que sus parámetros se reconozcan
 como declarados. Registrar un nombre que ya
 existe reemplaza la función anterior sin emitir advertencia.
 
+### Agregar un modelo al paquete
+
+Para que un modelo forme parte del paquete, alcanza con crear un módulo
+público (sin `_` inicial) en `src/neuromorphic/fisica/evolvers/` que lo
+registre con el decorador. No hace falta tocar ningún `__init__.py`: el
+paquete importa automáticamente todos sus módulos públicos.
+
+Si el módulo necesita una dependencia opcional, no la importes en el
+nivel superior del módulo público, porque se cargaría al importar
+`neuromorphic`. Ponela en un módulo privado (por ejemplo `_mi_kernel.py`)
+e importalo dentro del `init` del modelo, como hace `ladder_numba`.
+
 ## Modelos incluidos
 
 | Nombre | Descripción |
@@ -277,4 +289,6 @@ junturas el recorte actúa como una tasa máxima efectiva.
 ## Ver también
 
 - [`arquitectura.md`](arquitectura.md) — flujo de datos entre módulos.
-- Código fuente: `src/neuromorphic/fisica/evolvers/base.py`.
+- Código fuente: `src/neuromorphic/fisica/evolvers/`. El registro está en
+  `base.py` y cada modelo en su propio módulo (`stochastic1.py`,
+  `stochastic2.py`, `ladder.py`, `ladder_numba.py`, `thermal.py`).
