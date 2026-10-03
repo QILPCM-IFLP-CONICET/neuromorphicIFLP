@@ -1,4 +1,5 @@
 # simulador.py
+from collections.abc import Callable
 from typing import Any
 
 from scipy.sparse.linalg import spsolve
@@ -6,11 +7,15 @@ from scipy.sparse.linalg import spsolve
 from . import fisica as fis
 from .grafo import check_percolation
 
+SimulationCallbackFunction = Callable[[float, dict[str, Any], dict[str, Any]]]
+
 
 # ==============================================================================
 # SIMULACIÓN DE PULSOS DINÁMICOS
 # ==============================================================================
-def run_simulation_dynamic_pulse(simulation: dict[str, Any]):
+def run_simulation_dynamic_pulse(
+        simulation: dict[str, Any], callback: SimulationCallbackFunction| None = None
+):
     """Ejecuta el experimento de pulso y relajación (Fig. 2b).
 
     Somete la red a un voltaje alto ``V_INPUT`` durante ``T_PULSE``
@@ -24,6 +29,14 @@ def run_simulation_dynamic_pulse(simulation: dict[str, Any]):
     simulation : dict
         Diccionario de simulación. Debe contener ``"parameters"``,
         ``"graph"``, ``"terminals"`` y ``"circuit"``.
+    callback: Optional[SimulationCallbackFunction]
+        Una función que se llama cada vez que se actualiza la conductancia.
+        La función recibe el valor de t actual, y dos diccionarios:
+        uno con la simulación y otro con el estado actual de las corrientes
+        y la matriz de conductancia.
+        Permite guardar información calculada en cada paso, hacer
+        verificaciones al vuelo, o interrumpir la simulación
+        (vía una excepción).
 
     Returns
     -------
@@ -127,6 +140,10 @@ def run_simulation_dynamic_pulse(simulation: dict[str, Any]):
 
         # 4) Actualización estocástica (muta G in-place)
         update_conductance(simulation, V_vec)
+
+        # 5)
+        if callback is not None:
+            callback(current_time, simulation, {"I_vec": I_vec, "V_vec": V_vec, "Y": Y})
 
         current_time += dt
 
