@@ -16,7 +16,6 @@ from .base import (
 
 __all__ = [
     "EVOLVER_SPECS",
-    "EVOLVE_MODELS",
     "EvolverSpec",
     "declared_evolver_parameters",
     "init_all_off",

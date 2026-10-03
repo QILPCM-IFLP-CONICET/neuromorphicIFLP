@@ -14,7 +14,7 @@
    (hilos y        (topología,    ├── admitancia.py   (gráficas)
     junturas)       electrodos)   ├── corrientes.py
                                    └── evolvers/
-                                       └── EVOLVE_MODELS
+                                       └── EVOLVER_SPECS
                                            ◄── register_memristor_evol_model
         │              │              │              │
         └──────────────┴──────────────┘              │
@@ -102,8 +102,7 @@ que clonar el repositorio. Los overrides van todos por `parms=`.
 `fisica/evolvers/base.py` mantiene un registro global
 `EVOLVER_SPECS: dict[str, EvolverSpec]`, donde cada `EvolverSpec` agrupa
 la función de update, una función de inicialización y los parámetros
-propios del modelo con sus valores por defecto. `EVOLVE_MODELS` sigue
-existiendo como vista `nombre -> update`. Cada modelo se registra al
+propios del modelo con sus valores por defecto. Cada modelo se registra al
 importar su módulo mediante el decorador
 `register_memristor_evol_model("nombre", init=..., parameters=...)`.
 

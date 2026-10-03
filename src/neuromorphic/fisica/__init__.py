@@ -10,7 +10,6 @@ from .pulsos import get_v_ramp
 
 __all__ = [
     "EVOLVER_SPECS",
-    "EVOLVE_MODELS",
     "build_admittance_matrix",
     "calculate_input_current",
     "calculate_output_current",

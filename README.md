@@ -181,7 +181,7 @@ from neuromorphic import (
     setup_simulation,
     run_simulation_dynamic_pulse,
     plot_simulation_results,
-    EVOLVE_MODELS,
+    EVOLVER_SPECS,
 )
 ```
 

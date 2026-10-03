@@ -3,13 +3,13 @@
 ## Resumen
 
 Al final de cada paso temporal del motor (`run_simulation_dynamic_pulse`),
-el estado ON/OFF de cada memristor se actualiza invocando una función
-*evolver*. Qué función se usa se selecciona con la clave `evolver_model`
+el estado de cada memristor se actualiza invocando una función
+*evolver*. Qué modelo se usa se selecciona con la clave `evolver_model`
 del `.ini` —o su equivalente `EVOLVER` en los overrides— y la resolución
 se hace contra un registro global:
 
 ~~~python
-update_conductance = fis.EVOLVE_MODELS[p["EVOLVER"]]
+update_conductance = fis.initialize_evolver(simulation).update
 ~~~
 
 El paquete expone un mecanismo de registro para agregar modelos propios

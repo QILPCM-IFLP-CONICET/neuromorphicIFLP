@@ -251,3 +251,15 @@ def test_rerun_starts_from_initial_state(sim_percolating, capsys):
 
     assert a2[0] == a1[0] == 0
     assert g2[0] == pytest.approx(g1[0])
+
+
+@pytest.mark.parametrize(
+    "module", ["neuromorphic", "neuromorphic.fisica", "neuromorphic.fisica.evolvers"]
+)
+def test_all_exports_exist(module):
+    """Cada nombre de ``__all__`` existe (``from module import *`` no falla)."""
+    import importlib
+
+    mod = importlib.import_module(module)
+    missing = [name for name in mod.__all__ if not hasattr(mod, name)]
+    assert missing == []
