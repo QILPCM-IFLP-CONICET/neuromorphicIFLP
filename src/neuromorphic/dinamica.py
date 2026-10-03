@@ -29,14 +29,25 @@ def run_simulation_dynamic_pulse(
     simulation : dict
         Diccionario de simulación. Debe contener ``"parameters"``,
         ``"graph"``, ``"terminals"`` y ``"circuit"``.
-    callback: Optional[SimulationCallbackFunction]
-        Una función que se llama cada vez que se actualiza la conductancia.
-        La función recibe el valor de t actual, y dos diccionarios:
-        uno con la simulación y otro con el estado actual de las corrientes
-        y la matriz de conductancia.
+    callback : callable, optional
+        Función ``callback(t, simulation, step_data)`` que se llama en cada
+        paso, después de actualizar la conductancia. Recibe el tiempo ``t``
+        del paso, el diccionario de simulación (ya con el estado
+        actualizado) y un diccionario ``step_data`` con los datos del
+        circuito resuelto en ese paso, es decir, *antes* de la
+        actualización:
+
+        - ``"Y"``: matriz de admitancia;
+        - ``"I_vec"``: vector de corrientes inyectadas;
+        - ``"V_vec"``: voltajes nodales;
+        - ``"V_input"``: voltaje aplicado en los electrodos de entrada (V);
+        - ``"G_total"``: conductancia equivalente de la red (mS), el mismo
+          valor que se agrega al historial.
+
         Permite guardar información calculada en cada paso, hacer
-        verificaciones al vuelo, o interrumpir la simulación
-        (vía una excepción).
+        verificaciones al vuelo o interrumpir la simulación lanzando una
+        excepción, que se propaga a quien llamó a esta función (el
+        historial acumulado hasta ese momento se pierde).
 
     Returns
     -------
@@ -141,9 +152,16 @@ def run_simulation_dynamic_pulse(
         # 4) Actualización estocástica (muta G in-place)
         update_conductance(simulation, V_vec)
 
-        # 5)
+        # 5) Hook del usuario
         if callback is not None:
-            callback(current_time, simulation, {"I_vec": I_vec, "V_vec": V_vec, "Y": Y})
+            step_data = {
+                "Y": Y,
+                "I_vec": I_vec,
+                "V_vec": V_vec,
+                "V_input": v_now,
+                "G_total": G_total,
+            }
+            callback(current_time, simulation, step_data)
 
         current_time += dt
 

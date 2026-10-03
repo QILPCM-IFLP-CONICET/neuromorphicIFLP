@@ -70,6 +70,34 @@ posibles errores de tipeo. Los valores derivados (`PROXIMITY_THRESHOLD`,
 `R_WIRE_PER_LENGTH`, `TOTAL_TIME`) se recalculan automáticamente después
 del merge.
 
+### Inspección paso a paso
+
+`run_simulation_dynamic_pulse` acepta un `callback(t, simulation, step_data)`
+que se llama en cada paso, después de actualizar los memristores.
+`step_data` trae el circuito resuelto en ese paso (`Y`, `I_vec`, `V_vec`),
+el voltaje aplicado `V_input` y la conductancia equivalente `G_total` en
+mS. Por ejemplo, para registrar la fracción de junturas activas y cortar
+la corrida si la red satura:
+
+```python
+frac = []
+
+def monitor(t, simulation, step_data):
+    activos = simulation["circuit"]["memristor_active"]
+    frac.append(activos.mean())
+    if activos.all():
+        raise StopIteration(f"red saturada en t={t:.3f} s")
+
+try:
+    run_simulation_dynamic_pulse(sim, callback=monitor)
+except StopIteration as err:
+    print(err)
+```
+
+Una excepción lanzada desde el callback interrumpe la corrida y se
+propaga; el historial que devuelve la función se pierde, así que lo que
+haga falta conservar debe guardarlo el propio callback.
+
 ### Reproducibilidad
 
 `setup_simulation` siembra el generador global de NumPy con `RNG_SEED`
