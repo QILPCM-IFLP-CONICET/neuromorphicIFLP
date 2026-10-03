@@ -14,7 +14,7 @@ SimulationCallbackFunction = Callable[[float, dict[str, Any], dict[str, Any]]]
 # SIMULACIÓN DE PULSOS DINÁMICOS
 # ==============================================================================
 def run_simulation_dynamic_pulse(
-        simulation: dict[str, Any], callback: SimulationCallbackFunction| None = None
+    simulation: dict[str, Any], callback: SimulationCallbackFunction | None = None
 ):
     """Ejecuta el experimento de pulso y relajación (Fig. 2b).
 
