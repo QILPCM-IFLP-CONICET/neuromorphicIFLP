@@ -236,6 +236,13 @@ Este código implementa el modelo descrito en:
 
 ---
 
+## Documentación
+
+La documentación completa del proyecto y de la API está disponible en
+[https://qilpcm-iflp-conicet.github.io/neuromorphicNWLamas/](Documentación online)
+
+---
+
 ## Licencia
 
 MIT. Ver [LICENSE](LICENSE).
