@@ -7,7 +7,7 @@ from scipy.sparse.linalg import spsolve
 from . import fisica as fis
 from .grafo import check_percolation
 
-SimulationCallbackFunction = Callable[[float, dict[str, Any], dict[str, Any]]]
+SimulationCallbackFunction = Callable[[float, dict[str, Any], dict[str, Any]], None]
 
 
 # ==============================================================================
