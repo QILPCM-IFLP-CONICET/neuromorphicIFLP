@@ -77,16 +77,40 @@ def test_total_time_is_sum_of_pulse_and_relax():
 def test_unknown_key_warns():
     with pytest.warns(UnknownParameterWarning, match="NUM_WIRE"):
         result = load_parameters(parms={"NUM_WIRE": 100})  # typo intentional
-    # The typo key must NOT have been applied:
+    # The typo key does not override the real one:
     assert result["parameters"]["NUM_WIRES"] != 100
 
 
-def test_unknown_key_is_ignored_alongside_valid_one():
+def test_unknown_key_is_kept_alongside_valid_one():
     with pytest.warns(UnknownParameterWarning):
-        result = load_parameters(parms={"NUM_WIRES": 42, "typo_key": 999})
+        result = load_parameters(parms={"NUM_WIRES": 42, "MY_EXTRA": 999})
     p = result["parameters"]
     assert p["NUM_WIRES"] == 42
-    assert "typo_key" not in p
+    assert p["MY_EXTRA"] == 999
+
+
+def test_declared_evolver_parameter_does_not_warn():
+    from neuromorphic.fisica.evolvers import EVOLVER_SPECS, register_memristor_evol_model
+
+    @register_memristor_evol_model("_tmp_declared", parameters={"_TMP_RATE": 1.0})
+    def _tmp(simulation, V_solved):
+        return simulation["graph"]
+
+    try:
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            p = load_parameters(parms={"_TMP_RATE": 2.5})["parameters"]
+        assert p["_TMP_RATE"] == 2.5
+    finally:
+        EVOLVER_SPECS.pop("_tmp_declared")
+
+
+def test_array_parameter_is_accepted():
+    import numpy as np
+
+    with pytest.warns(UnknownParameterWarning):
+        p = load_parameters(parms={"PER_JUNCTION": np.arange(3.0)})["parameters"]
+    assert p["PER_JUNCTION"].tolist() == [0.0, 1.0, 2.0]
 
 
 def test_no_warning_with_all_valid_keys():
@@ -146,3 +170,19 @@ def test_explicit_filepath_is_used(tmp_path):
     )
     result = load_parameters(filepath=ini)
     assert result["parameters"]["NUM_WIRES"] == 999
+
+
+def test_evolver_section_in_ini(tmp_path):
+    from importlib.resources import files
+
+    base = files("neuromorphic").joinpath("defaults.ini").read_text(encoding="utf-8")
+    ini = tmp_path / "with_evolver.ini"
+    ini.write_text(
+        base + "\n[Evolver]\nnu_up = 1e3\nmax_jumps = 2\nlabel = demo\nrates = [1.0, 2.0]\n",
+        encoding="utf-8",
+    )
+    p = load_parameters(filepath=ini)["parameters"]
+    assert p["NU_UP"] == 1e3
+    assert p["MAX_JUMPS"] == 2 and isinstance(p["MAX_JUMPS"], int)
+    assert p["LABEL"] == "demo"
+    assert p["RATES"] == [1.0, 2.0]

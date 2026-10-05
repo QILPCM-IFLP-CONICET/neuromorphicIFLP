@@ -7,10 +7,11 @@ import pytest
 from scipy.sparse import csr_matrix
 
 from neuromorphic.fisica import (
-    EVOLVE_MODELS,
+    EVOLVER_SPECS,
     build_admittance_matrix,
     calculate_input_current,
     calculate_output_current,
+    initialize_evolver,
 )
 
 
@@ -56,10 +57,20 @@ def test_circuit_is_stored_in_simulation(sim_small):
 # ---------------------------------------------------------------------------
 # Stochastic conductance update
 # ---------------------------------------------------------------------------
+def _select_evolver(sim, name):
+    """Selecciona e inicializa el modelo antes de llamar a su update."""
+    sim["parameters"]["EVOLVER"] = name
+    return initialize_evolver(sim).update
+
+
+# ---------------------------------------------------------------------------
+# Evolvers (todos los registrados)
+# ---------------------------------------------------------------------------
 @pytest.mark.parametrize(
-    ["evolver_name", "evolver_fn"], [(name, fn) for name, fn in EVOLVE_MODELS.items()]
+    ["evolver_name", "evolver_spec"], [(name, fn) for name, fn in EVOLVER_SPECS.items()]
 )
-def test_update_returns_same_graph(sim_percolating, evolver_name, evolver_fn):
+def test_update_returns_same_graph(sim_percolating, evolver_name, evolver_spec):
+    evolver_fn = _select_evolver(sim_percolating, evolver_name)
     G = sim_percolating["graph"]
     Y, I_vec, _ = build_admittance_matrix(sim_percolating)
     from scipy.sparse.linalg import spsolve
@@ -70,10 +81,12 @@ def test_update_returns_same_graph(sim_percolating, evolver_name, evolver_fn):
 
 
 @pytest.mark.parametrize(
-    ["evolver_name", "evolver_fn"], [(name, fn) for name, fn in EVOLVE_MODELS.items()]
+    ["evolver_name", "evolver_spec"], [(name, fn) for name, fn in EVOLVER_SPECS.items()]
 )
-def test_only_memristor_edges_change_state(sim_percolating, evolver_name, evolver_fn):
+def test_only_memristor_edges_change_state(sim_percolating, evolver_name, evolver_spec):
     """Non-memristor edges must never carry a 'conductance' attribute."""
+    evolver_fn = _select_evolver(sim_percolating, evolver_name)
+
     G = sim_percolating["graph"]
     Y, I_vec, _ = build_admittance_matrix(sim_percolating)
     from scipy.sparse.linalg import spsolve
@@ -87,15 +100,15 @@ def test_only_memristor_edges_change_state(sim_percolating, evolver_name, evolve
 
 
 @pytest.mark.parametrize(
-    ["evolver_name", "evolver_fn"], [(name, fn) for name, fn in EVOLVE_MODELS.items()]
+    ["evolver_name", "evolver_spec"], [(name, fn) for name, fn in EVOLVER_SPECS.items()]
 )
-def test_zero_voltage_does_not_trigger_set(sim_percolating, evolver_name, evolver_fn):
+def test_zero_voltage_does_not_trigger_set(sim_percolating, evolver_name, evolver_spec):
     """With V_mem = 0 everywhere, no memristor should turn ON."""
+    evolver_fn = _select_evolver(sim_percolating, evolver_name)
     p = sim_percolating["parameters"]
     G = sim_percolating["graph"]
     n = G.number_of_nodes()
     V_zero = np.zeros(n)
-
     evolver_fn(sim_percolating, V_zero)
 
     n_on = sum(
@@ -104,6 +117,7 @@ def test_zero_voltage_does_not_trigger_set(sim_percolating, evolver_name, evolve
         if d.get("is_memristor", False) and d.get("conductance") == p["G_ON"]
     )
     assert n_on == 0
+    assert not sim_percolating["circuit"]["memristor_active"].any()
 
 
 # ---------------------------------------------------------------------------

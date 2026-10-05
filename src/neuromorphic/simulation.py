@@ -5,7 +5,7 @@ from typing import Any
 
 import numpy as np
 
-from .fisica import build_admittance_matrix
+from .fisica import build_admittance_matrix, initialize_evolver
 from .geometria import generate_and_find_junctions
 from .grafo import build_graph, find_electrode_nodes, prune_dead_components
 from .load_config import load_parameters
@@ -45,7 +45,10 @@ def setup_simulation(
         - ``"junctions"`` : estructuras geométricas de la red.
         - ``"graph"`` : objeto :class:`networkx.Graph`.
         - ``"terminals"`` : ``{"input_nodes", "output_nodes"}``.
-        - ``"circuit"`` : ``{"Y", "I", "node_to_index"}``.
+        - ``"circuit"`` : matriz ``Y``, vector ``I``, ``node_to_index`` y
+          los arrays por memristor (``memristor_g``, ``memristor_active``,
+          ``mem_edge_keys``, ...).
+        - ``"evolver_state"`` : estado propio del modelo de evolución.
 
     See Also
     --------
@@ -60,4 +63,5 @@ def setup_simulation(
     if prune:
         prune_dead_components(simulation)
     build_admittance_matrix(simulation)
+    initialize_evolver(simulation)
     return simulation
