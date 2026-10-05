@@ -1,5 +1,5 @@
 # docs/conf.py
-"""Configuración de Sphinx para neuromorphicNWLamas."""
+"""Configuración de Sphinx para neuromorphicIFLP."""
 
 import sys
 from pathlib import Path
@@ -13,7 +13,7 @@ sys.path.insert(0, str(REPO_ROOT / "src"))
 # ---------------------------------------------------------------------------
 # Metadatos del proyecto
 # ---------------------------------------------------------------------------
-project = "neuromorphicNWLamas"
+project = "neuromorphicIFLP"
 author = "QILPCM-IFLP-CONICET"
 copyright = "2026, QILPCM-IFLP-CONICET"
 
@@ -108,13 +108,13 @@ intersphinx_mapping = {
 # HTML
 # ---------------------------------------------------------------------------
 html_theme = "furo"
-html_title = f"neuromorphicNWLamas {version}"
+html_title = f"neuromorphicIFLP {version}"
 html_static_path = ["_static"]
 html_logo = None  # agregar si tienen logo
 html_theme_options = {
     "sidebar_hide_name": False,
     "navigation_with_keys": True,
-    "source_repository": "https://github.com/QILPCM-IFLP-CONICET/neuromorphicNWLamas/",
+    "source_repository": "https://github.com/QILPCM-IFLP-CONICET/neuromorphicIFLP/",
     "source_branch": "main",
     "source_directory": "docs/",
 }

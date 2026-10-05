@@ -54,7 +54,7 @@ tanto la geometría como los evolvers consumen `numpy.random`. Los overrides se 
 ## Uso en Google Colab
 
 ~~~bash
-pip install git+https://github.com/QILPCM-IFLP-CONICET/neuromorphicNWLamas.git
+pip install git+https://github.com/QILPCM-IFLP-CONICET/neuromorphicIFLP.git
 ~~~
 
 import configparser, importlib, sys

@@ -1,6 +1,6 @@
-# neuromorphicNWLamas
+# neuromorphicIFLP
 
-Simulador estocástico de redes de nanohilos neuromórficas (NWN).
+Simulador estocástico de redes neuromórficas (NN).
 
 ```{toctree}
 :maxdepth: 2

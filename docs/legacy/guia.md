@@ -1,4 +1,4 @@
-# neuromorphicNWLamas — Guía histórica
+# neuromorphicIFLP — Guía histórica
 
 > ⚠️ **Deprecado.** Este documento describe la API previa al empaquetado
 > (uso de `config.ini`, imports planos, recarga de módulos con
@@ -137,7 +137,7 @@ Para integrar y ejecutar este repositorio en Google Colab junto con una interfaz
 import os
 import sys
 
-REPO_URL = "[https://github.com/tu_usuario/neuromorphicNWLamas.git](https://github.com/tu_usuario/neuromorphicNWLamas.git)"
+REPO_URL = "[https://github.com/tu_usuario/neuromorphicIFLP.git](https://github.com/tu_usuario/neuromorphicIFLP.git)"
 REPO_NAME = REPO_URL.split("/")[-1].replace(".git", "")
 
 if not os.path.exists(REPO_NAME):
