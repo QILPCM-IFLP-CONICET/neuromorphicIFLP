@@ -1,4 +1,4 @@
-# neuromorphicNWLamas
+# neuromorphicIFLP
 
 Simulador estocástico de redes de nanohilos neuromórficas (Nanowire
 Networks, NWN) en Python. Genera redes autoensambladas de nanohilos de
@@ -13,8 +13,8 @@ de facilitación y relajación volátil inspirados en plasticidad sináptica.
 Requiere Python 3.10 o superior.
 
 ```bash
-git clone https://github.com/QILPCM-IFLP-CONICET/neuromorphicNWLamas.git
-cd neuromorphicNWLamas
+git clone https://github.com/QILPCM-IFLP-CONICET/neuromorphicIFLP.git
+cd neuromorphicIFLP
 pip install -e .
 ```
 
@@ -140,7 +140,7 @@ Lamas et al. (2026):
 donde I_mem = G_ON · V_mem es la corriente a través de la juntura. El
 evolver por defecto, `stochastic1`, usa una variante anterior sin
 dependencia en Δt ni en la corriente (ver
-[`docs/evolvers.md`](https://github.com/QILPCM-IFLP-CONICET/neuromorphicNWLamas/blob/main/docs/evolvers.md)).
+[`docs/evolvers.md`](https://github.com/QILPCM-IFLP-CONICET/neuromorphicIFLP/blob/main/docs/evolvers.md)).
 
 En cada paso temporal se resuelve el sistema Y · V = I sobre la matriz
 de admitancia dispersa del grafo, aplicando condiciones de contorno de
@@ -267,7 +267,7 @@ Este código implementa el modelo descrito en:
 ## Documentación
 
 La documentación completa del proyecto y de la API está disponible en
-[https://qilpcm-iflp-conicet.github.io/neuromorphicNWLamas/]
+[https://qilpcm-iflp-conicet.github.io/neuromorphicIFLP/]
 
 ---
 
@@ -275,6 +275,6 @@ La documentación completa del proyecto y de la API está disponible en
 
 MIT. Ver [LICENSE](LICENSE).
 
-[![Tests](https://github.com/QILPCM-IFLP-CONICET/neuromorphicNWLamas/actions/workflows/tests.yml/badge.svg)](...)
+[![Tests](https://github.com/QILPCM-IFLP-CONICET/neuromorphicIFLP/actions/workflows/tests.yml/badge.svg)](...)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](...)
