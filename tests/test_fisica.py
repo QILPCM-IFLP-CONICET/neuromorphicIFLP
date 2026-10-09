@@ -16,6 +16,7 @@ from neuromorphic.fisica import (
 from neuromorphic.fisica.admitancia import (
     _precompute_circuit_arrays,
     build_reduced_admittance_matrix,
+    solve_node_voltages,
 )
 
 
@@ -284,3 +285,60 @@ def test_reduced_admittance_consistent_with_dirichlet_solution(sim_percolating):
     residual = (Y_red @ V_red)[:n_int]
     scale = abs(Y_red) @ np.abs(V_red)
     assert np.all(np.abs(residual) <= 1e-9 * scale[:n_int] + 1e-30)
+
+
+# ---------------------------------------------------------------------------
+# Resolución particionada
+# ---------------------------------------------------------------------------
+# Con todos los memristores en G_OFF, la mayor parte de la red queda unida a
+# los electrodos solo por junturas de 1e-9 S, frente a conductancias internas
+# de ~1e-2 S. Ese contraste limita la precisión de los voltajes en doble
+# precisión a ~1e-5 relativo con cualquier solver (el directo actual incluido).
+# Los tests de error hacia adelante usan esta tolerancia; el de Kirchhoff
+# (error hacia atrás) es estricto.
+V_FORWARD_ATOL = 1e-4
+
+
+def test_solve_node_voltages_pins_electrodes(sim_percolating):
+    V = solve_node_voltages(sim_percolating, [2.5, -0.5])
+    c = sim_percolating["circuit"]
+    assert V.shape == (c["N"],)
+    assert np.all(V[c["electrode_of_node"] == 0] == 2.5)
+    assert np.all(V[c["electrode_of_node"] == 1] == -0.5)
+
+
+def test_solve_node_voltages_satisfies_kirchhoff(sim_percolating):
+    V = solve_node_voltages(sim_percolating, [1.0, 0.0])
+    c = sim_percolating["circuit"]
+    A = _physical_laplacian(sim_percolating)
+    internal = c["electrode_of_node"] < 0
+    residual = (A @ V)[internal]
+    scale = (abs(A) @ np.abs(V))[internal]
+    assert np.all(np.abs(residual) <= 1e-9 * scale + 1e-30)
+
+
+def test_solve_node_voltages_matches_dirichlet_solver(sim_percolating):
+    from scipy.sparse.linalg import spsolve
+
+    V_old = spsolve(*build_admittance_matrix(sim_percolating, v_input=1.0)[:2])
+    V_new = solve_node_voltages(sim_percolating, [1.0, sim_percolating["parameters"]["V_GROUND"]])
+    np.testing.assert_allclose(V_new, V_old, rtol=0, atol=V_FORWARD_ATOL)
+
+
+def test_solve_node_voltages_is_linear(sim_percolating):
+    V1 = solve_node_voltages(sim_percolating, [1.0, 0.0])
+    V2 = solve_node_voltages(sim_percolating, [0.0, 1.0])
+    V12 = solve_node_voltages(sim_percolating, [3.0, -2.0])
+    np.testing.assert_allclose(V12, 3.0 * V1 - 2.0 * V2, rtol=0, atol=5 * V_FORWARD_ATOL)
+
+
+def test_solve_node_voltages_uniform_bias_gives_uniform_potential(sim_percolating):
+    """Con todos los electrodos al mismo voltaje no hay caída en la red."""
+    V = solve_node_voltages(sim_percolating, [0.7, 0.7])
+    np.testing.assert_allclose(V, 0.7, rtol=0, atol=V_FORWARD_ATOL)
+
+
+@pytest.mark.parametrize("V_b", [[1.0], [1.0, 0.0, 0.0], [[1.0, 0.0]]])
+def test_solve_node_voltages_rejects_wrong_length(sim_small, V_b):
+    with pytest.raises(ValueError, match="un valor por electrodo"):
+        solve_node_voltages(sim_small, V_b)

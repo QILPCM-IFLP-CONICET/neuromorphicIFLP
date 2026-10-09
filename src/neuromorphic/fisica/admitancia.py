@@ -3,6 +3,7 @@ from typing import Any
 
 import numpy as np
 from scipy.sparse import coo_matrix, csr_matrix
+from scipy.sparse.linalg import splu
 
 
 # ==============================================================================
@@ -357,3 +358,93 @@ def build_reduced_admittance_matrix(simulation: dict[str, Any]) -> csr_matrix:
         shape=(M, M),
     ).tocsr()
     return Y_red
+
+
+# ==============================================================================
+# RESOLUCIÓN DEL SISTEMA PARTICIONADO
+# ==============================================================================
+def _solve_partitioned(Y_red: csr_matrix, known: np.ndarray, V_known: np.ndarray) -> np.ndarray:
+    """Resuelve ``Y_red V = 0`` en las filas libres con ``V[known] = V_known``.
+
+    Separa las filas en conocidas (``b``) y libres (``u``) y resuelve
+
+    .. math::
+
+        Y_{uu} \\, V_u = -Y_{ub} \\, V_b .
+
+    ``Y_uu`` es simétrica y definida positiva cuando cada componente conexa
+    toca al menos una fila conocida, así que se factoriza con un
+    ordenamiento simétrico.
+
+    Returns
+    -------
+    numpy.ndarray
+        Vector ``V`` completo de shape ``(M,)``.
+    """
+    M = Y_red.shape[0]
+    is_known = np.zeros(M, dtype=bool)
+    is_known[known] = True
+    free = np.flatnonzero(~is_known)
+
+    Y = Y_red.tocsc()
+    Y_uu = Y[free][:, free]
+    Y_ub = Y[free][:, known]
+
+    V = np.empty(M)
+    V[known] = V_known
+    if free.size:
+        lu = splu(Y_uu, permc_spec="MMD_AT_PLUS_A", options={"SymmetricMode": True})
+        V[free] = lu.solve(-(Y_ub @ V_known))
+    return V
+
+
+def solve_node_voltages(simulation: dict[str, Any], V_b: Any) -> np.ndarray:
+    """Voltajes nodales con un voltaje fijado en cada electrodo.
+
+    Ensambla la matriz reducida (:func:`build_reduced_admittance_matrix`),
+    fija la fila de cada electrodo en el valor dado y resuelve Kirchhoff
+    para los nodos internos.
+
+    Parameters
+    ----------
+    simulation : dict
+        Diccionario de simulación.
+    V_b : array_like
+        Voltajes de los electrodos, uno por electrodo, en el orden de
+        ``circuit["electrode_names"]``.
+
+    Returns
+    -------
+    numpy.ndarray
+        Vector de voltajes de shape ``(N,)``, indexado como
+        ``circuit["node_to_index"]``. Todos los contactos de un electrodo
+        tienen exactamente el voltaje de ese electrodo.
+
+    Raises
+    ------
+    ValueError
+        Si ``V_b`` no tiene un valor por electrodo.
+
+    Notes
+    -----
+    Cuando partes extensas de la red quedan unidas a los electrodos solo por
+    memristores en ``G_OFF``, el contraste con la conductancia de los
+    segmentos de hilo (de ``1e7`` o más) limita la precisión de los voltajes
+    nodales en esas regiones a ~``1e-5`` relativo en doble precisión. El
+    residuo de Kirchhoff, en cambio, queda en el orden del error de redondeo.
+    """
+    Y_red = build_reduced_admittance_matrix(simulation)
+    circuit = simulation["circuit"]
+    n_internal = circuit["n_internal"]
+    n_electrodes = circuit["n_electrodes"]
+
+    V_b = np.asarray(V_b, dtype=np.float64)
+    if V_b.shape != (n_electrodes,):
+        raise ValueError(
+            f"V_b debe tener un valor por electrodo: se esperaban {n_electrodes} "
+            f"({circuit['electrode_names']}), se recibió shape {V_b.shape}."
+        )
+
+    known = np.arange(n_internal, n_internal + n_electrodes)
+    V_red = _solve_partitioned(Y_red, known, V_b)
+    return V_red[circuit["unknown_of_node"]]
