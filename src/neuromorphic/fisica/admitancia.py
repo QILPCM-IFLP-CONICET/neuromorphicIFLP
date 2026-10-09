@@ -2,7 +2,7 @@
 from typing import Any
 
 import numpy as np
-from scipy.sparse import coo_matrix
+from scipy.sparse import coo_matrix, csr_matrix
 
 
 # ==============================================================================
@@ -75,6 +75,14 @@ def _precompute_circuit_arrays(simulation: dict[str, Any]) -> None:
     - ``n_electrodes``, ``electrode_names``: cantidad y nombres de los
       electrodos; el índice ``k`` de ``electrode_of_node`` corresponde a
       ``electrode_names[k]``.
+    - ``unknown_of_node``: array ``(N,)`` que asigna a cada nodo su fila en
+      el sistema reducido (ver :func:`build_reduced_admittance_matrix`).
+      Los nodos internos ocupan las filas ``0 .. n_internal-1`` en el orden
+      de ``node_to_index``; todos los nodos del electrodo ``k`` comparten la
+      fila ``n_internal + k``.
+    - ``n_internal``: cantidad de nodos internos.
+    - ``reduced_edge_mask``: aristas que conectan filas distintas del sistema
+      reducido (excluye las que unen dos nodos del mismo electrodo).
     """
     p = simulation["parameters"]
     G = simulation["graph"]
@@ -122,6 +130,12 @@ def _precompute_circuit_arrays(simulation: dict[str, Any]) -> None:
     electrode_names, electrode_nodes = _electrode_node_lists(simulation)
     electrode_of_node = _build_electrode_of_node(electrode_nodes, electrode_names, node_to_index, N)
 
+    is_internal = electrode_of_node < 0
+    n_internal = int(is_internal.sum())
+    unknown_of_node = np.where(is_internal, -1, n_internal + electrode_of_node)
+    unknown_of_node[is_internal] = np.arange(n_internal, dtype=np.int64)
+    reduced_edge_mask = unknown_of_node[u_idx] != unknown_of_node[v_idx]
+
     circuit["node_to_index"] = node_to_index
     circuit["N"] = N
     circuit["edge_u_idx"] = u_idx
@@ -138,6 +152,45 @@ def _precompute_circuit_arrays(simulation: dict[str, Any]) -> None:
     circuit["electrode_of_node"] = electrode_of_node
     circuit["n_electrodes"] = len(electrode_names)
     circuit["electrode_names"] = electrode_names
+    circuit["unknown_of_node"] = unknown_of_node
+    circuit["n_internal"] = n_internal
+    circuit["reduced_edge_mask"] = reduced_edge_mask
+
+
+def _edge_conductances(circuit: dict[str, Any]) -> np.ndarray:
+    """Conductancia actual de cada arista: segmentos fijos + memristores."""
+    edge_g = circuit["edge_fixed_g"].copy()
+    mem_edge_idx = circuit["mem_edge_idx"]
+    if len(mem_edge_idx) > 0:
+        edge_g[mem_edge_idx] = circuit["memristor_g"]
+    return edge_g
+
+
+def _laplacian_triplets(
+    u_idx: np.ndarray, v_idx: np.ndarray, edge_g: np.ndarray
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Triplets COO del laplaciano pesado: 4 entradas por arista."""
+    E = len(u_idx)
+    rows = np.empty(4 * E, dtype=np.int64)
+    cols = np.empty(4 * E, dtype=np.int64)
+    vals = np.empty(4 * E, dtype=np.float64)
+
+    rows[0::4] = u_idx
+    cols[0::4] = u_idx
+    vals[0::4] = edge_g
+
+    rows[1::4] = v_idx
+    cols[1::4] = v_idx
+    vals[1::4] = edge_g
+
+    rows[2::4] = u_idx
+    cols[2::4] = v_idx
+    vals[2::4] = -edge_g
+
+    rows[3::4] = v_idx
+    cols[3::4] = u_idx
+    vals[3::4] = -edge_g
+    return rows, cols, vals
 
 
 # ==============================================================================
@@ -195,39 +248,12 @@ def build_admittance_matrix(
 
     u_idx = circuit["edge_u_idx"]
     v_idx = circuit["edge_v_idx"]
-    fixed_g = circuit["edge_fixed_g"]
-    mem_edge_idx = circuit["mem_edge_idx"]
-    mem_g = circuit["memristor_g"]
     N = circuit["N"]
     input_idx = circuit["input_idx"]
     output_idx = circuit["output_idx"]
 
-    # --- Conductancia por arista (segmentos fijos + memristores actuales) ---
-    edge_g = fixed_g.copy()
-    if len(mem_edge_idx) > 0:
-        edge_g[mem_edge_idx] = mem_g
-
-    # --- Construir triplets COO: 4 por arista ---
-    E = len(u_idx)
-    rows = np.empty(4 * E, dtype=np.int64)
-    cols = np.empty(4 * E, dtype=np.int64)
-    vals = np.empty(4 * E, dtype=np.float64)
-
-    rows[0::4] = u_idx
-    cols[0::4] = u_idx
-    vals[0::4] = edge_g
-
-    rows[1::4] = v_idx
-    cols[1::4] = v_idx
-    vals[1::4] = edge_g
-
-    rows[2::4] = u_idx
-    cols[2::4] = v_idx
-    vals[2::4] = -edge_g
-
-    rows[3::4] = v_idx
-    cols[3::4] = u_idx
-    vals[3::4] = -edge_g
+    # --- Laplaciano pesado (segmentos fijos + memristores actuales) ---
+    rows, cols, vals = _laplacian_triplets(u_idx, v_idx, _edge_conductances(circuit))
 
     # --- G_LEAK en diagonales de nodos internos ---
     electrode_mask = np.zeros(N, dtype=bool)
@@ -263,3 +289,71 @@ def build_admittance_matrix(
     circuit["Y"] = Y
     circuit["I"] = I_vec
     return Y, I_vec, circuit["node_to_index"]
+
+
+# ==============================================================================
+# MATRIZ DE ADMITANCIA REDUCIDA (UNA INCÓGNITA POR ELECTRODO)
+# ==============================================================================
+def build_reduced_admittance_matrix(simulation: dict[str, Any]) -> csr_matrix:
+    """Ensambla la matriz de admitancia con cada electrodo contraído a un nodo.
+
+    Todos los nodos de contacto del electrodo ``k`` se identifican con una
+    única fila, ``circuit["n_internal"] + k``; los nodos internos conservan
+    una fila propia (ver ``circuit["unknown_of_node"]``). El resultado es el
+    laplaciano pesado de la red con los electrodos contraídos, más
+    ``G_LEAK`` en la diagonal de los nodos internos:
+
+    .. math::
+
+        Y_{\\mathrm{red}} = P^{T} \\, (L + G_{\\mathrm{leak}} D_{\\mathrm{int}}) \\, P,
+
+    con :math:`P_{n m} = 1` si el nodo :math:`n` corresponde a la fila
+    :math:`m`. Fijar el mismo voltaje en todos los contactos de un electrodo,
+    como hace :func:`build_admittance_matrix`, es equivalente a esta
+    contracción.
+
+    No se imponen condiciones de contorno: la matriz es simétrica y las
+    filas de los electrodos suman cero. Las aristas que unen dos nodos del
+    mismo electrodo no conducen corriente y se omiten.
+
+    Parameters
+    ----------
+    simulation : dict
+        Diccionario de simulación con ``"parameters"``, ``"graph"`` y
+        ``"terminals"``.
+
+    Returns
+    -------
+    scipy.sparse.csr_matrix
+        Matriz de shape ``(M, M)`` con ``M = n_internal + n_electrodes``.
+        Las primeras ``n_internal`` filas son los nodos internos y las
+        últimas ``n_electrodes``, los electrodos en el orden de
+        ``circuit["electrode_names"]``.
+    """
+    if "circuit" not in simulation:
+        simulation["circuit"] = {}
+    circuit = simulation["circuit"]
+    if "unknown_of_node" not in circuit:
+        _precompute_circuit_arrays(simulation)
+
+    n_internal = circuit["n_internal"]
+    M = n_internal + circuit["n_electrodes"]
+    m_of = circuit["unknown_of_node"]
+    keep = circuit["reduced_edge_mask"]
+
+    edge_g = _edge_conductances(circuit)[keep]
+    rows, cols, vals = _laplacian_triplets(
+        m_of[circuit["edge_u_idx"][keep]], m_of[circuit["edge_v_idx"][keep]], edge_g
+    )
+
+    leak_rows = np.arange(n_internal, dtype=np.int64)
+    leak_vals = np.full(n_internal, simulation["parameters"]["G_LEAK"])
+
+    Y_red = coo_matrix(
+        (
+            np.concatenate([vals, leak_vals]),
+            (np.concatenate([rows, leak_rows]), np.concatenate([cols, leak_rows])),
+        ),
+        shape=(M, M),
+    ).tocsr()
+    return Y_red

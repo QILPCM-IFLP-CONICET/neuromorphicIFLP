@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import numpy as np
 import pytest
-from scipy.sparse import csr_matrix
+from scipy.sparse import coo_matrix, csr_matrix
 
 from neuromorphic.fisica import (
     EVOLVER_SPECS,
@@ -13,7 +13,10 @@ from neuromorphic.fisica import (
     calculate_output_current,
     initialize_evolver,
 )
-from neuromorphic.fisica.admitancia import _precompute_circuit_arrays
+from neuromorphic.fisica.admitancia import (
+    _precompute_circuit_arrays,
+    build_reduced_admittance_matrix,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -196,3 +199,88 @@ def test_electrode_of_node_uses_electrode_list_when_present(sim_small):
     assert all(c["electrode_of_node"][n2i[n]] == 0 for n in inp[:half])
     assert all(c["electrode_of_node"][n2i[n]] == 1 for n in inp[half:])
     assert all(c["electrode_of_node"][n2i[n]] == 2 for n in terminals["output_nodes"])
+
+
+def test_unknown_of_node_layout(sim_small):
+    c = sim_small["circuit"]
+    m_of, e_of, n_int = c["unknown_of_node"], c["electrode_of_node"], c["n_internal"]
+    internal = e_of < 0
+    assert n_int == internal.sum()
+    np.testing.assert_array_equal(m_of[internal], np.arange(n_int))
+    np.testing.assert_array_equal(m_of[~internal], n_int + e_of[~internal])
+
+
+# ---------------------------------------------------------------------------
+# Matriz de admitancia reducida
+# ---------------------------------------------------------------------------
+def _physical_laplacian(sim):
+    """Laplaciano con G_LEAK en nodos internos, armado desde el grafo."""
+    p, c = sim["parameters"], sim["circuit"]
+    n2i, N = c["node_to_index"], c["N"]
+    rows, cols, vals = [], [], []
+    for u, v, data in sim["graph"].edges(data=True):
+        if data.get("is_memristor", False):
+            g = data["conductance"]
+        else:
+            g = 1.0 / (data["weight"] * p["R_WIRE_PER_LENGTH"] + 1e-12)
+        i, j = n2i[u], n2i[v]
+        rows += [i, j, i, j]
+        cols += [i, j, j, i]
+        vals += [g, g, -g, -g]
+    internal = np.flatnonzero(c["electrode_of_node"] < 0)
+    rows += list(internal)
+    cols += list(internal)
+    vals += [p["G_LEAK"]] * len(internal)
+    return coo_matrix((vals, (rows, cols)), shape=(N, N)).tocsr()
+
+
+def _projection(c):
+    N = c["N"]
+    M = c["n_internal"] + c["n_electrodes"]
+    return coo_matrix((np.ones(N), (np.arange(N), c["unknown_of_node"])), shape=(N, M)).tocsr()
+
+
+def test_reduced_admittance_is_contracted_laplacian(sim_small):
+    Y_red = build_reduced_admittance_matrix(sim_small)
+    c = sim_small["circuit"]
+    P = _projection(c)
+    expected = P.T @ _physical_laplacian(sim_small) @ P
+    assert Y_red.shape == expected.shape
+    scale = abs(expected).max()
+    assert abs(Y_red - expected).max() <= 1e-12 * scale
+
+
+def test_reduced_admittance_symmetry_and_row_sums(sim_small):
+    Y_red = build_reduced_admittance_matrix(sim_small)
+    c = sim_small["circuit"]
+    n_int = c["n_internal"]
+    assert abs(Y_red - Y_red.T).max() == 0.0
+    row_sums = np.asarray(Y_red.sum(axis=1)).ravel()
+    diag = Y_red.diagonal()
+    g_leak = sim_small["parameters"]["G_LEAK"]
+    np.testing.assert_allclose(row_sums[:n_int], g_leak, rtol=0, atol=1e-12 * diag.max())
+    np.testing.assert_allclose(row_sums[n_int:], 0.0, rtol=0, atol=1e-12 * diag.max())
+
+
+def test_reduced_admittance_tracks_memristor_state(sim_small):
+    Y0 = build_reduced_admittance_matrix(sim_small).copy()
+    c = sim_small["circuit"]
+    c["memristor_g"][:] = sim_small["parameters"]["G_ON"]
+    Y1 = build_reduced_admittance_matrix(sim_small)
+    assert abs(Y1 - Y0).max() > 0
+
+
+def test_reduced_admittance_consistent_with_dirichlet_solution(sim_percolating):
+    """La solución del sistema actual cumple Kirchhoff en el sistema reducido."""
+    from scipy.sparse.linalg import spsolve
+
+    Y, I_vec, _ = build_admittance_matrix(sim_percolating, v_input=1.0)
+    V = spsolve(Y, I_vec)
+    c = sim_percolating["circuit"]
+    n_int = c["n_internal"]
+    V_red = np.empty(n_int + c["n_electrodes"])
+    V_red[c["unknown_of_node"]] = V  # los contactos de un electrodo comparten valor
+    Y_red = build_reduced_admittance_matrix(sim_percolating)
+    residual = (Y_red @ V_red)[:n_int]
+    scale = abs(Y_red) @ np.abs(V_red)
+    assert np.all(np.abs(residual) <= 1e-9 * scale[:n_int] + 1e-30)
