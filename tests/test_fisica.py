@@ -13,6 +13,7 @@ from neuromorphic.fisica import (
     calculate_output_current,
     initialize_evolver,
 )
+from neuromorphic.fisica.admitancia import _precompute_circuit_arrays
 
 
 # ---------------------------------------------------------------------------
@@ -152,3 +153,46 @@ def test_input_and_output_currents_have_opposite_sign(sim_percolating):
     # In a passive network driven by a positive voltage, at least one
     # of the two must be non-trivially non-zero.
     assert abs(I_in) + abs(I_out) > 0
+
+
+# ---------------------------------------------------------------------------
+# Mapa nodo -> electrodo
+# ---------------------------------------------------------------------------
+def test_electrode_of_node_matches_terminals(sim_small):
+    c = sim_small["circuit"]
+    e_of = c["electrode_of_node"]
+    assert e_of.shape == (c["N"],)
+    assert e_of.dtype == np.int64
+    assert c["n_electrodes"] == 2
+    assert c["electrode_names"] == ["input", "output"]
+    assert np.all(e_of[c["input_idx"]] == 0)
+    assert np.all(e_of[c["output_idx"]] == 1)
+    n_contacts = len(c["input_idx"]) + len(c["output_idx"])
+    assert np.count_nonzero(e_of >= 0) == n_contacts
+    assert set(np.unique(e_of)) <= {-1, 0, 1}
+
+
+def test_electrode_of_node_rejects_overlap(sim_small):
+    terminals = sim_small["terminals"]
+    terminals["output_nodes"] = [*terminals["output_nodes"], terminals["input_nodes"][0]]
+    with pytest.raises(ValueError, match="'input' y 'output'"):
+        _precompute_circuit_arrays(sim_small)
+
+
+def test_electrode_of_node_uses_electrode_list_when_present(sim_small):
+    terminals = sim_small["terminals"]
+    inp = terminals["input_nodes"]
+    half = len(inp) // 2
+    terminals["electrodes"] = [
+        {"name": "a", "nodes": inp[:half]},
+        {"name": "b", "nodes": inp[half:]},
+        {"name": "gnd", "nodes": terminals["output_nodes"]},
+    ]
+    _precompute_circuit_arrays(sim_small)
+    c = sim_small["circuit"]
+    n2i = c["node_to_index"]
+    assert c["n_electrodes"] == 3
+    assert c["electrode_names"] == ["a", "b", "gnd"]
+    assert all(c["electrode_of_node"][n2i[n]] == 0 for n in inp[:half])
+    assert all(c["electrode_of_node"][n2i[n]] == 1 for n in inp[half:])
+    assert all(c["electrode_of_node"][n2i[n]] == 2 for n in terminals["output_nodes"])

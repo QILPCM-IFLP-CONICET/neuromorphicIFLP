@@ -6,6 +6,56 @@ from scipy.sparse import coo_matrix
 
 
 # ==============================================================================
+# ELECTRODOS
+# ==============================================================================
+def _electrode_node_lists(simulation: dict[str, Any]) -> tuple[list[str], list[list[Any]]]:
+    """Nombres y nodos de cada electrodo, en el orden que define su índice.
+
+    Mientras ``terminals`` solo tenga el par entrada/salida, se interpretan
+    como dos electrodos: ``0 = "input"`` y ``1 = "output"``. Cuando exista
+    ``terminals["electrodes"]`` (lista de dicts con ``"name"`` y
+    ``"nodes"``), se usa esa lista y su orden.
+    """
+    terminals = simulation["terminals"]
+    if "electrodes" in terminals:
+        electrodes = terminals["electrodes"]
+        return [e["name"] for e in electrodes], [list(e["nodes"]) for e in electrodes]
+    return (
+        ["input", "output"],
+        [list(terminals["input_nodes"]), list(terminals["output_nodes"])],
+    )
+
+
+def _build_electrode_of_node(
+    node_lists: list[list[Any]],
+    names: list[str],
+    node_to_index: dict[Any, int],
+    N: int,
+) -> np.ndarray:
+    """Array ``(N,)`` con el índice de electrodo de cada nodo (``-1`` si es interno).
+
+    Raises
+    ------
+    ValueError
+        Si un nodo pertenece a más de un electrodo.
+    """
+    electrode_of_node = np.full(N, -1, dtype=np.int64)
+    for k, nodes in enumerate(node_lists):
+        idx = np.fromiter((node_to_index[n] for n in nodes), dtype=np.int64, count=len(nodes))
+        taken = electrode_of_node[idx]
+        clash = taken >= 0
+        if clash.any():
+            other = int(taken[clash][0])
+            raise ValueError(
+                f"{int(clash.sum())} nodo(s) pertenecen a la vez a los electrodos "
+                f"'{names[other]}' y '{names[k]}'. Las regiones de los electrodos "
+                "no pueden superponerse."
+            )
+        electrode_of_node[idx] = k
+    return electrode_of_node
+
+
+# ==============================================================================
 # PRECÓMPUTO DE ESTRUCTURAS (una vez por simulación)
 # ==============================================================================
 def _precompute_circuit_arrays(simulation: dict[str, Any]) -> None:
@@ -20,6 +70,11 @@ def _precompute_circuit_arrays(simulation: dict[str, Any]) -> None:
     - ``mem_edge_idx``: índices (en el array de aristas) de los memristores.
     - ``memristor_g``: conductancias actuales de los memristores.
     - ``input_idx``, ``output_idx``: índices de los electrodos.
+    - ``electrode_of_node``: array ``(N,)`` con el índice de electrodo de
+      cada nodo, ``-1`` para los nodos internos.
+    - ``n_electrodes``, ``electrode_names``: cantidad y nombres de los
+      electrodos; el índice ``k`` de ``electrode_of_node`` corresponde a
+      ``electrode_names[k]``.
     """
     p = simulation["parameters"]
     G = simulation["graph"]
@@ -64,6 +119,9 @@ def _precompute_circuit_arrays(simulation: dict[str, Any]) -> None:
         dtype=np.int64,
     )
 
+    electrode_names, electrode_nodes = _electrode_node_lists(simulation)
+    electrode_of_node = _build_electrode_of_node(electrode_nodes, electrode_names, node_to_index, N)
+
     circuit["node_to_index"] = node_to_index
     circuit["N"] = N
     circuit["edge_u_idx"] = u_idx
@@ -77,6 +135,9 @@ def _precompute_circuit_arrays(simulation: dict[str, Any]) -> None:
     circuit["mem_edge_keys"] = [edges[i][:2] for i in mem_edge_idx]
     circuit["input_idx"] = input_idx
     circuit["output_idx"] = output_idx
+    circuit["electrode_of_node"] = electrode_of_node
+    circuit["n_electrodes"] = len(electrode_names)
+    circuit["electrode_names"] = electrode_names
 
 
 # ==============================================================================

@@ -73,6 +73,7 @@ def run_simulation_dynamic_pulse(
     """
     p = simulation["parameters"]
     G = simulation["graph"]
+    step_data:Dict[str, Any] = {}
     terminals = simulation["terminals"]
     input_nodes = terminals["input_nodes"]
     output_nodes = terminals["output_nodes"]
@@ -154,13 +155,13 @@ def run_simulation_dynamic_pulse(
 
         # 5) Hook del usuario
         if callback is not None:
-            step_data = {
+            step_data.update({
                 "Y": Y,
                 "I_vec": I_vec,
                 "V_vec": V_vec,
                 "V_input": v_now,
                 "G_total": G_total,
-            }
+            })
             callback(current_time, simulation, step_data)
 
         current_time += dt
