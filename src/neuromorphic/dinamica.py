@@ -73,7 +73,7 @@ def run_simulation_dynamic_pulse(
     """
     p = simulation["parameters"]
     G = simulation["graph"]
-    step_data:Dict[str, Any] = {}
+    step_data:dict[str, Any] = {}
     terminals = simulation["terminals"]
     input_nodes = terminals["input_nodes"]
     output_nodes = terminals["output_nodes"]
